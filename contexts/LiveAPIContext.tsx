@@ -3,6 +3,7 @@ import { AppConfig, MediaConfig, Message } from '../types';
 import { ModelClient } from '../lib/api/ModelClient';
 import { AudioStreamer, VideoStreamer, ScreenCapture, AudioPlayer } from '../lib/utils/media-utils';
 import { MODEL_REGISTRY } from '../utils/model-registry';
+import { PERSONAS } from '../constants';
 
 
 interface LiveAPIContextType {
@@ -21,6 +22,7 @@ interface LiveAPIContextType {
     videoStream: MediaStream | null;
     cameraStream: MediaStream | null;
     setOverlayCanvas: (canvas: HTMLCanvasElement | null) => void;
+    setConfig: (config: Partial<AppConfig>) => void;
 }
 
 const LiveAPIContext = createContext<LiveAPIContextType | undefined>(undefined);
@@ -46,6 +48,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const audioPlayerRef = useRef<any>(null);
     const activeToolsMapRef = useRef<Record<string, any>>({});
+    const latestConfigRef = useRef<AppConfig | null>(null);
 
     // Helper to add messages
     const addMessage = (text: string, type: 'user' | 'assistant' | 'system' | 'user-transcript', isFinished: boolean = false) => {
@@ -66,9 +69,20 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 }
             }
 
+            // Determine sender name based on type and persona
+            let senderName = 'System';
+            if (type === 'user' || type === 'user-transcript') {
+                senderName = 'You';
+            } else if (type === 'assistant') {
+                // Use persona name if available
+                const currentPersonaId = latestConfigRef.current?.selectedPersonaId;
+                const persona = PERSONAS.find(p => p.id === currentPersonaId);
+                senderName = persona ? persona.name : 'Gemini';
+            }
+
             return [...prev, {
                 id: crypto.randomUUID(),
-                sender: type === 'user' ? 'You' : type === 'assistant' ? 'Gemini' : 'System',
+                sender: senderName,
                 text: text || '',
                 type: type,
                 timestamp: new Date(),
@@ -98,7 +112,10 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 addMessage(message.data.text, 'assistant', message.data.finished);
                 break;
             case 'setup_complete':
-                addMessage("Connected and ready!", 'system', true);
+                const currentPersonaId = latestConfigRef.current?.selectedPersonaId;
+                const persona = PERSONAS.find(p => p.id === currentPersonaId);
+                const welcomeMsg = persona ? `${persona.name} is online` : "Connected and ready!";
+                addMessage(welcomeMsg, 'system', true);
                 break;
             case 'tool_call':
                 const functionCalls = message.data.functionCalls;
@@ -124,6 +141,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const connect = async (config: AppConfig) => {
         if (connecting || connected) return;
         setConnecting(true);
+        latestConfigRef.current = config;
 
         try {
             // Re-create client
@@ -149,8 +167,8 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             clientRef.current.on('close', () => {
                 setConnected(false);
                 setConnecting(false);
-                // Stop media
-                cleanupMedia();
+                // Media streams are intentionally NOT cleaned up here.
+                // They persist independently and are re-attached on reconnect.
             });
             clientRef.current.on('error', (err: any) => {
                 console.error("Adapter Error:", err);
@@ -366,6 +384,87 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         }
     };
 
+    const setConfig = useCallback(async (configUpdate: Partial<AppConfig>) => {
+        if (!clientRef.current || !latestConfigRef.current) return;
+
+        // Merge the update into the stored config
+        const newConfig = { ...latestConfigRef.current, ...configUpdate };
+        latestConfigRef.current = newConfig;
+
+        // For Live API, we need to reconnect to apply config changes
+        const modelDef = MODEL_REGISTRY[newConfig.provider];
+        if (modelDef?.protocol === 'websocket' && connected) {
+            console.log('🔄 Config changed, reconnecting with new settings (media streams preserved)...');
+
+            // Neutralize old adapter's handlers so its close event doesn't override new state
+            clientRef.current.removeAllListeners();
+            clientRef.current.disconnect();
+
+            // Create new adapter with updated config
+            const adapterType = 'live';
+            clientRef.current = ModelClient.createAdapter(adapterType, {
+                apiKey: newConfig.apiKey,
+                modelId: newConfig.modelId,
+                voice: newConfig.voice,
+                systemInstruction: newConfig.systemInstructions,
+                enableVAD: newConfig.enableVAD,
+                silenceDuration: newConfig.silenceDuration,
+                prefixPadding: newConfig.prefixPadding,
+                startSpeechSensitivity: newConfig.startSpeechSensitivity === 'default' ? 'START_SENSITIVITY_UNSPECIFIED' : newConfig.startSpeechSensitivity === 'high' ? 'START_SENSITIVITY_HIGH' : newConfig.startSpeechSensitivity === 'medium' ? 'START_SENSITIVITY_MEDIUM' : 'START_SENSITIVITY_LOW',
+                endSpeechSensitivity: newConfig.endSpeechSensitivity === 'default' ? 'END_SENSITIVITY_UNSPECIFIED' : newConfig.endSpeechSensitivity === 'high' ? 'END_SENSITIVITY_HIGH' : newConfig.endSpeechSensitivity === 'medium' ? 'END_SENSITIVITY_MEDIUM' : 'END_SENSITIVITY_LOW',
+            });
+
+            // Re-attach event handlers
+            clientRef.current.on('content', handleMessage);
+            clientRef.current.on('open', () => {
+                setConnected(true);
+                setConnecting(false);
+            });
+            clientRef.current.on('close', () => {
+                setConnected(false);
+                setConnecting(false);
+            });
+            clientRef.current.on('error', (err: any) => {
+                console.error('Adapter Error:', err);
+                setConnecting(false);
+            });
+
+            // Re-attach tools
+            const tools = [];
+            const functionDecls = [];
+            if (newConfig.googleGrounding) {
+                tools.push({ googleSearch: {} });
+            }
+            if (functionDecls.length > 0) {
+                tools.push({ functionDeclarations: functionDecls });
+            }
+            clientRef.current.setTools(tools);
+
+            // Reconnect
+            setConnecting(true);
+            const success = await clientRef.current.connect();
+            if (success) {
+                // Re-point active streamers to the new adapter
+                if (audioStreamerRef.current) {
+                    audioStreamerRef.current.setClient(clientRef.current);
+                }
+                if (videoStreamerRef.current) {
+                    videoStreamerRef.current.setClient(clientRef.current);
+                }
+                if (screenCaptureRef.current) {
+                    screenCaptureRef.current.setClient(clientRef.current);
+                }
+                console.log('✅ Reconnected with new config. Media streams preserved.');
+            } else {
+                setConnecting(false);
+            }
+        } else {
+            // For Flash/REST API, just update config in-place
+            clientRef.current.updateConfig(configUpdate);
+        }
+    }, [connected]);
+
+
     const contextValue = useMemo(() => ({
         connected,
         connecting,
@@ -378,10 +477,10 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         messages,
         audioStreaming,
         videoStreaming,
-        screenSharing,
         videoStream,
         cameraStream,
-        setOverlayCanvas
+        setOverlayCanvas,
+        setConfig
     }), [
         connected,
         connecting,
@@ -397,7 +496,8 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         screenSharing,
         videoStream,
         cameraStream,
-        setOverlayCanvas
+        setOverlayCanvas,
+        setConfig
     ]);
 
     return (

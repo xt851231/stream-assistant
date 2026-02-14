@@ -215,3 +215,76 @@
 
 **Key Changes**:
 - Modified `stream-quest-dashboard/contexts/LiveAPIContext.tsx`: Added `MODEL_REGISTRY` import, replaced hardcoded provider check with registry protocol lookup.
+
+## [2026-02-14 18:00] Fixed Mid-Session Persona/Voice Updates for Gemini Live API
+
+**The Problem:**
+- Switching personas mid-session caused the WebSocket to close with `Invalid JSON payload received. Unknown name "speechConfig" at 'setup'` and later `Request contains an invalid argument`.
+- The `useEffect` in `App.tsx` fired on every connection, causing infinite reconnect loops.
+
+**Root Cause:**
+- The Gemini Live API **only accepts the `setup` message as the first message** in a session. Sending a raw `setup` message mid-session is rejected by the server.
+- The `useEffect` watching `config.systemInstructions` and `config.voice` had no guard against firing on initial connection or after a reconnect.
+
+**The Solution:**
+1. **Reconnect approach**: Changed `GeminiLiveAdapter.updateConfig()` to disconnect and reconnect with the new config, instead of sending a raw WebSocket `setup` message.
+2. **Ref guard**: Added a `prevConfigRef` in `App.tsx` that tracks previous `systemInstructions` and `voice` values. The `useEffect` now only fires `setLiveConfig` when these values actually change (not on initial mount or reconnect).
+3. **Property mapping**: Added `systemInstructions` → `systemInstruction` mapping in both adapters' `updateConfig` methods, since `AppConfig` uses plural but the API expects singular.
+
+**Key Changes:**
+- `lib/api/adapters/GeminiLiveAdapter.js`: Replaced raw WebSocket `setup` with disconnect+reconnect in `updateConfig()`.
+- `lib/api/adapters/GeminiFlashAdapter.js`: Added `systemInstructions` → `systemInstruction` mapping.
+- `App.tsx`: Added `prevConfigRef` guard to prevent infinite reconnect loops.
+- `components/ConfigurationMenu.tsx`: Added `handlePersonaSelect()` to update `selectedPersonaId`, `systemInstructions`, and `voice` atomically.
+- `tests/mid_session_updates.test.js`: Rewritten to verify disconnect+reconnect behavior.
+- `tests/mid_session_updates_flash.test.js`: Rewritten with dependency injection (no `mock.module`), added TTS recreation test.
+
+## [2026-02-14 18:15] Decoupled Media Streams from Model Connection Lifecycle
+
+**The Problem:**
+- When switching personas on the Live API, the disconnect+reconnect killed all media streams (mic, camera, screen share), forcing users to manually re-enable them.
+
+**Root Cause:**
+- The `on('close')` handler in `LiveAPIContext.tsx` called `cleanupMedia()`, stopping all media streams.
+- Media streamers (`AudioStreamer`, `VideoStreamer`, `ScreenCapture`) held a fixed reference to the adapter (`this.client`) set in the constructor with no way to swap it.
+
+**The Solution:**
+1. **`setClient(newClient)`**: Added to `AudioStreamer` and `BaseVideoCapture` to swap the adapter reference without stopping streams.
+2. **Removed `cleanupMedia()` from `on('close')`**: Media streams now persist independently. Only user-initiated `disconnect()` stops them.
+3. **`setConfig()` with reconnect**: In `LiveAPIContext.tsx`, `setConfig` now handles the full reconnect lifecycle for Live API: disconnect adapter → create new adapter → connect → re-attach all active streamers via `setClient()`.
+
+**Key Changes:**
+- `lib/utils/media-utils.js`: Added `setClient()` to `AudioStreamer` and `BaseVideoCapture`.
+- `contexts/LiveAPIContext.tsx`: Removed `cleanupMedia()` from close handler, added `latestConfigRef`, reimplemented `setConfig` with reconnect logic.
+- `lib/api/adapters/GeminiLiveAdapter.js`: Simplified `updateConfig()` to only merge config (reconnect handled by context).
+- `tests/mid_session_updates.test.js`: Added `setClient` tests and updated adapter tests.
+
+## [2026-02-14 19:10] Persona Identity, Context Sync, and Menu Refinement
+
+**The Problem:**
+- Connection messages were generic ("Connected and ready!") and then used incorrect persona names (e.g., "Felix is online" after switching to Kai).
+- Chat sender names were confusing: user voice inputs appeared as "System", and assistant responses were hardcoded as "Gemini".
+- The configuration menu lumped all VAD settings together, though some are specific to Gemini Live's server-side logic.
+- Duplicate logs for "Speech volume set to 100%" cluttered the console on every reload.
+
+**Root Cause:**
+- `App.tsx` was only passing `systemInstructions` and `voice` to the context during updates, leaving the `selectedPersonaId` stale.
+- `LiveAPIContext.tsx` didn't have logic to map assistant type to the active persona name or map `user-transcript` to "You".
+- `ChatMessage.tsx` hardcoded the Bot icon for all assistant messages.
+- React StrictMode in development mode mounts components twice, triggering double calls to `SpeechAudioContext.setVolume`.
+
+**The Solution:**
+1. **Context Sync Fix**: Updated `App.tsx` `useEffect` to watch and pass `selectedPersonaId` to `setLiveConfig`.
+2. **Dynamic Identity**: 
+   - Updated `LiveAPIContext.addMessage` to resolve persona names and map `user-transcript` -> "You".
+   - Customized connection message: `${PersonaName} is online`.
+3. **Persona-Specific Icons**: Updated `ChatMessage.tsx` to lookup and display a persona's emoji/icon instead of a generic bot.
+4. **Improved Menu Organization**: Split VAD settings in `model-registry.ts` into "Client VAD" (Common) and "Server VAD" (Live specific).
+5. **Log Debouncing**: Modified `SpeechAudioContext.setVolume` to only log when the volume value actually changes.
+
+**Key Changes:**
+- `App.tsx`: Added `selectedPersonaId` to config sync logic.
+- `contexts/LiveAPIContext.tsx`: Updated `addMessage` and `setup_complete` handlers.
+- `components/ChatMessage.tsx`: Added persona lookup for icon rendering.
+- `utils/model-registry.ts`: Reorganized `uiGroups` to separate Client/Server VAD.
+- `lib/utils/SpeechAudioContext.js`: Added check to prevent duplicate logging.

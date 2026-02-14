@@ -1,6 +1,7 @@
 import React from 'react';
 import { Message, ThemeConfig } from '../types';
 import { Crown, Bot } from 'lucide-react';
+import { PERSONAS } from '../constants';
 
 interface ChatMessageProps {
     message: Message;
@@ -27,8 +28,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, themeConfig }) => {
                         <Crown size={12} className="text-yellow-500" />
                     </div>
                 ) : msg.type === 'assistant' ? (
-                    <div className="size-6 bg-purple-900/50 rounded border border-purple-500 flex items-center justify-center">
-                        <Bot size={12} className="text-purple-400" />
+                    <div className="size-6 bg-purple-900/50 rounded border border-purple-500 flex items-center justify-center text-[14px]">
+                        {PERSONAS.find(p => p.name === msg.sender)?.emoji || <Bot size={12} className="text-purple-400" />}
                     </div>
                 ) : (
                     <img

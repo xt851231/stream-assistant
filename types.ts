@@ -7,6 +7,8 @@ export interface Persona {
     name: string;
     emoji: string;
     description: string;
+    systemInstruction: string;
+    voice: string;
 }
 
 export interface AppConfig {

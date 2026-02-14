@@ -26,7 +26,8 @@ const App: React.FC = () => {
         screenSharing,
         audioStreaming,
         videoStreaming,
-        setOverlayCanvas // Add this
+        setOverlayCanvas,
+        setConfig: setLiveConfig // Rename to avoid collision with state setter
     } = useLiveAPI();
 
     // State
@@ -82,6 +83,32 @@ const App: React.FC = () => {
     React.useEffect(() => {
         localStorage.setItem('theme_config', JSON.stringify(themeConfig));
     }, [themeConfig]);
+
+    // Update Config when relevant fields change (not on initial connection)
+    const prevConfigRef = React.useRef<{ systemInstructions?: string; voice?: string; selectedPersonaId?: string }>({});
+    React.useEffect(() => {
+        if (!connected) return;
+
+        const prev = prevConfigRef.current;
+        const changed = prev.systemInstructions !== config.systemInstructions
+            || prev.voice !== config.voice
+            || prev.selectedPersonaId !== config.selectedPersonaId;
+
+        // Only update if values actually changed (skip initial mount)
+        if (changed && (prev.systemInstructions !== undefined || prev.voice !== undefined || prev.selectedPersonaId !== undefined)) {
+            setLiveConfig({
+                systemInstructions: config.systemInstructions,
+                voice: config.voice,
+                selectedPersonaId: config.selectedPersonaId
+            });
+        }
+
+        prevConfigRef.current = {
+            systemInstructions: config.systemInstructions,
+            voice: config.voice,
+            selectedPersonaId: config.selectedPersonaId
+        };
+    }, [config.systemInstructions, config.voice, config.selectedPersonaId, connected, setLiveConfig]);
 
     // Derived State
     const connectionState: ConnectionState = connected ? 'connected' : connecting ? 'connecting' : 'disconnected';

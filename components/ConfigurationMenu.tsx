@@ -56,6 +56,20 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
         onConfigChange(newConfig);
     };
 
+    const handlePersonaSelect = (personaId: string) => {
+        const persona = PERSONAS.find(p => p.id === personaId);
+        if (!persona) return;
+
+        const newConfig = {
+            ...config,
+            selectedPersonaId: persona.id,
+            systemInstructions: persona.systemInstruction,
+            voice: persona.voice
+        };
+        localStorage.setItem(`config_${currentModelId}`, JSON.stringify(newConfig));
+        onConfigChange(newConfig);
+    };
+
     const handleModelChange = (newModelKey: string) => {
         if (newModelKey === currentModelId) return;
 
@@ -134,7 +148,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                             {PERSONAS.map((persona) => (
                                 <button
                                     key={persona.id}
-                                    onClick={() => handleChange('selectedPersonaId', persona.id)}
+                                    onClick={() => handlePersonaSelect(persona.id)}
                                     className={`flex flex-col items-center p-2 rounded border-2 transition-all ${config.selectedPersonaId === persona.id
                                         ? 'bg-blue-900/50 border-[#ffd700] shadow-[0_0_10px_rgba(255,215,0,0.2)]'
                                         : 'bg-[#162032] border-gray-700 hover:border-gray-500'
@@ -232,8 +246,8 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 font-pixel text-[10px] transition-colors whitespace-nowrap ${activeTab === tab.id
-                                ? 'bg-[#2b6cee] text-white'
-                                : 'bg-[#1e3a8a] text-gray-400 hover:text-white'
+                            ? 'bg-[#2b6cee] text-white'
+                            : 'bg-[#1e3a8a] text-gray-400 hover:text-white'
                             }`}
                     >
                         {tab.id === 'appearance' ? <Image size={14} /> : renderIcon(tab.icon || 'settings')}

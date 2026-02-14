@@ -22,7 +22,8 @@ export const MODEL_REGISTRY: Record<string, any> = {
                 sections: [
                     { title: 'Connection', settings: ['apiKey', 'modelId'] },
                     { title: 'Behavior', settings: ['persona', 'systemInstructions', 'voice', 'temperature'] },
-                    { title: 'VAD Settings', settings: ['enableVAD', 'startSpeechSensitivity', 'endSpeechSensitivity', 'silenceDuration', 'prefixPadding'] }
+                    { title: 'Client VAD', settings: ['enableVAD', 'silenceDuration', 'prefixPadding'] },
+                    { title: 'Server VAD (Gemini Live)', settings: ['startSpeechSensitivity', 'endSpeechSensitivity'] }
                 ]
             }
         ]
@@ -41,7 +42,8 @@ export const MODEL_REGISTRY: Record<string, any> = {
                 sections: [
                     { title: 'Connection', settings: ['apiKey', 'modelId'] },
                     { title: 'Behavior', settings: ['persona', 'systemInstructions', 'temperature'] },
-                    { title: 'Reasoning', settings: ['thinkingBudget', 'topP', 'topK'] }
+                    { title: 'Reasoning', settings: ['thinkingBudget', 'topP', 'topK'] },
+                    { title: 'Client VAD', settings: ['enableVAD', 'silenceDuration', 'prefixPadding'] },
                 ]
             }
         ]
