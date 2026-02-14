@@ -1,0 +1,8 @@
+{
+  "track_id": "retro_persona_20260214",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-14T10:00:00Z",
+  "updated_at": "2026-02-14T10:00:00Z",
+  "description": "Implement a 'Retro Game Persona' system and integrate basic visual perception for on-screen dialogue detection."
+}
