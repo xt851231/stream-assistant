@@ -36,6 +36,21 @@
 **Key Changes**:
 - Modified `stream-quest-dashboard/components/ChatSidebar.tsx`: Added `min-w-0` to the input element's class list.
 
+## [2026-02-15 01:44] Enabling Native Affective Dialog
+
+**The Problem:**
+The native `enableAffectiveDialog` field in `LiveConnectConfig` was rejected by the API with an "Unknown name" error. This was because the feature requires the `v1alpha` API version.
+
+**The Solution:**
+1. Kept the `gemini-2.5-flash-native-audio-preview-12-2025` model ID (correct for Live API).
+2. Updated `GeminiLiveAdapter` to initialize the `GoogleGenAI` client with `{ httpOptions: { apiVersion: "v1alpha" } }`.
+3. Added `enableAffectiveDialog: true` to the connection config.
+4. Removed the manual system instruction fallback.
+
+**Key Changes:**
+- `lib/api/adapters/GeminiLiveAdapter.js`: Updated client initialization for `v1alpha` and added `enableAffectiveDialog`.
+- `constants.ts`: Reverted model ID to `gemini-2.5-flash-native-audio-preview-12-2025`.
+
 ## [2026-02-10 14:05] Fixed Toolbelt Icon Overflow
 
 **The Problem**: The "Toolbelt" component's icons and controls would overflow the container on narrow screens. This was because the container had a fixed height and `flex-nowrap` behavior, causing content to spill out or be cut off without any way to access it.
@@ -288,3 +303,40 @@
 - `components/ChatMessage.tsx`: Added persona lookup for icon rendering.
 - `utils/model-registry.ts`: Reorganized `uiGroups` to separate Client/Server VAD.
 - `lib/utils/SpeechAudioContext.js`: Added check to prevent duplicate logging.
+
+## [2026-02-15 00:55] Fixed Transcription, Deprecation Warning, and Proactive Audio Loop
+
+**The Problem:**
+- Proactive audio caused non-stop talking after being enabled.
+- Transcription (input/output) did not appear in the chat.
+- Console showed deprecation warning: `Setting LiveConnectConfig.generation_config is deprecated`.
+
+**Root Cause:**
+1. **Non-stop talking:** `isModelRespondingRef` didn't exist. The proactive nudge timer only checked `isSpeaking` (user mic), not model output state. After each model response, the next nudge fired immediately.
+2. **Deprecation warning:** `temperature`, `topP`, `topK` were nested inside `generationConfig: {}`, but the SDK now expects them directly on `LiveConnectConfig`.
+3. **Transcription:** Both `createAdapter()` call sites in `LiveAPIContext.tsx` (initial connect and setConfig reconnect) used a hand-picked config object that only included a subset of fields. `inputTranscription`, `outputTranscription`, `temperature`, `topP`, `topK`, `thinkingBudget`, and `affectiveDialog` were all missing — they arrived as `undefined` at the adapter, so the SDK never received transcription config in the setup message.
+
+**The Solution:**
+1. Added `isModelRespondingRef` to `LiveAPIContext.tsx` — set `true` on model content, cleared on `turn_complete`/`interrupted`. Proactive nudges are blocked while model is responding.
+2. Flattened `generationConfig` fields directly onto `LiveConnectConfig` in `GeminiLiveAdapter.js`.
+3. Added the missing config fields (`inputTranscription`, `outputTranscription`, `temperature`, `topP`, `topK`, `thinkingBudget`, `affectiveDialog`) to both `createAdapter()` call sites in `LiveAPIContext.tsx`.
+4. Simplified `inputAudioTranscription` config to `{}` and added fallback transcription handlers + debug logging in the adapter.
+
+**Key Changes:**
+- `contexts/LiveAPIContext.tsx`: Added `isModelRespondingRef`, `turn_complete` handler, and added missing config fields to both `createAdapter()` calls (lines ~204 and ~466).
+- `lib/api/adapters/GeminiLiveAdapter.js`: Flattened generation config, simplified transcription config, added fallback transcription handlers and debug logging.
+
+## [2026-02-15 01:17] Proactive Response Appending to Previous Chat Entry
+
+**The Problem:**
+When proactive audio triggered a new model response, the response text appeared appended to the previous assistant message in chat instead of as a new, separate chat entry.
+
+**Root Cause:**
+The `turn_complete` handler in `LiveAPIContext.tsx` reset `isModelRespondingRef` and rescheduled the proactive timer, but **never marked the last message as `isFinished: true`**. The `addMessage()` function checks `lastMsg.type === type && !lastMsg.isFinished` — since the last assistant message was never marked finished, the next assistant response (from the proactive nudge) was appended to it.
+
+**The Solution:**
+In the `turn_complete` handler, use `setMessages` to mark the last message's `isFinished` flag as `true`. This causes `addMessage()` to create a new chat entry for subsequent assistant responses.
+
+**Key Changes:**
+- `contexts/LiveAPIContext.tsx`: Added `setMessages` update in `turn_complete` handler to set `isFinished: true` on the last message.
+

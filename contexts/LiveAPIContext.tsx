@@ -4,6 +4,7 @@ import { ModelClient } from '../lib/api/ModelClient';
 import { AudioStreamer, VideoStreamer, ScreenCapture, AudioPlayer } from '../lib/utils/media-utils';
 import { MODEL_REGISTRY } from '../utils/model-registry';
 import { PERSONAS } from '../constants';
+import { calculateNextProactiveTime } from '../lib/utils/scheduler-utils';
 
 
 interface LiveAPIContextType {
@@ -49,6 +50,50 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const audioPlayerRef = useRef<any>(null);
     const activeToolsMapRef = useRef<Record<string, any>>({});
     const latestConfigRef = useRef<AppConfig | null>(null);
+    const lastUserSpeechTimeRef = useRef<number>(Date.now());
+    const nextProactiveInteractionTimeRef = useRef<number>(0);
+    const isModelRespondingRef = useRef<boolean>(false);
+
+    // Helper to schedule next proactive interaction with jitter
+    const scheduleNextProactive = useCallback(() => {
+        const config = latestConfigRef.current;
+        if (!config?.proactiveAudio) return;
+
+        const baseInterval = config.proactiveAudioInterval || 10000;
+        const nextTime = calculateNextProactiveTime(baseInterval);
+
+        nextProactiveInteractionTimeRef.current = nextTime;
+        console.log(`⏰ Next proactive nudge scheduled for ${new Date(nextTime).toLocaleTimeString()} (Interval: ${baseInterval}ms)`);
+    }, []);
+
+    // Proactive Audio Logic
+    useEffect(() => {
+        if (!connected) return;
+
+        // Schedule initial nudge on connect
+        scheduleNextProactive();
+
+        const interval = setInterval(() => {
+            // Check if proactive audio is enabled in the LATEST config
+            if (!latestConfigRef.current?.proactiveAudio) return;
+
+            // Don't nudge if model is currently responding or user is speaking
+            if (isModelRespondingRef.current) return;
+            if (audioStreamerRef.current?.isSpeaking) return;
+
+            if (Date.now() > nextProactiveInteractionTimeRef.current) {
+                console.log("⏰ Proactive Nudge triggered!");
+                // Send a neutral prompt to encourage the model to speak
+                clientRef.current?.sendText(" ");
+                isModelRespondingRef.current = true; // Assume model will respond
+
+                // Reschedule next one
+                scheduleNextProactive();
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [connected, scheduleNextProactive]);
 
     // Helper to add messages
     const addMessage = (text: string, type: 'user' | 'assistant' | 'system' | 'user-transcript', isFinished: boolean = false) => {
@@ -94,9 +139,11 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const handleMessage = (message: any) => {
         switch (message.type) {
             case 'text':
+                isModelRespondingRef.current = true;
                 addMessage(message.data, 'assistant', message.endOfTurn);
                 break;
             case 'audio':
+                isModelRespondingRef.current = true;
                 if (audioPlayerRef.current) {
                     audioPlayerRef.current.play(message.data);
                 } else {
@@ -107,8 +154,6 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 addMessage(message.data.text, 'user-transcript', message.data.finished);
                 break;
             case 'output_transcription':
-                // Handled via 'text' usually? Or specific event. 
-                // LiveAPIDemo handles output_transcription as assistant text
                 addMessage(message.data.text, 'assistant', message.data.finished);
                 break;
             case 'setup_complete':
@@ -129,10 +174,31 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 });
                 break;
             case 'interrupted':
+                isModelRespondingRef.current = false;
                 addMessage("[Interrupted]", 'system', true);
                 if (audioPlayerRef.current) audioPlayerRef.current.interrupt();
+                // Reschedule proactive timer after interruption
+                scheduleNextProactive();
+                break;
+            case 'turn_complete':
+                isModelRespondingRef.current = false;
+                // Mark the last message as finished so next response starts a new entry
+                setMessages(prev => {
+                    if (prev.length > 0 && !prev[prev.length - 1].isFinished) {
+                        const updated = [...prev];
+                        updated[updated.length - 1] = {
+                            ...updated[updated.length - 1],
+                            isFinished: true
+                        };
+                        return updated;
+                    }
+                    return prev;
+                });
+                // Model finished responding — reschedule the proactive timer
+                scheduleNextProactive();
                 break;
             case 'error':
+                isModelRespondingRef.current = false;
                 addMessage(`Error: ${message.data}`, 'system', true);
                 break;
         }
@@ -152,6 +218,13 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 modelId: config.modelId,
                 voice: config.voice,
                 systemInstruction: config.systemInstructions,
+                temperature: config.temperature,
+                topP: config.topP,
+                topK: config.topK,
+                thinkingBudget: config.thinkingBudget,
+                affectiveDialog: config.affectiveDialog,
+                inputTranscription: config.inputTranscription,
+                outputTranscription: config.outputTranscription,
                 enableVAD: config.enableVAD,
                 silenceDuration: config.silenceDuration,
                 prefixPadding: config.prefixPadding,
@@ -249,6 +322,8 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             }
 
             clientRef.current.sendText(text, imageBase64);
+            // Reset proactive timer since user just interacted
+            scheduleNextProactive();
         }
     };
 
@@ -264,8 +339,13 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 audioStreamerRef.current.vadSpeechHoldTime = config.silenceDuration;
 
                 // Hook up VAD status to control video transmission
-                // This matches the original app's workflow to ensure the model "sees" when the user speaks
                 audioStreamerRef.current.onSpeechStatusChange = (isSpeaking: boolean) => {
+                    if (isSpeaking) {
+                        lastUserSpeechTimeRef.current = Date.now();
+                        // Reset proactive timer when user speaks
+                        scheduleNextProactive();
+                    }
+
                     if (config.enableVAD) {
                         if (videoStreamerRef.current) {
                             videoStreamerRef.current.transmitFrames = isSpeaking;
@@ -407,6 +487,13 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 modelId: newConfig.modelId,
                 voice: newConfig.voice,
                 systemInstruction: newConfig.systemInstructions,
+                temperature: newConfig.temperature,
+                topP: newConfig.topP,
+                topK: newConfig.topK,
+                thinkingBudget: newConfig.thinkingBudget,
+                affectiveDialog: newConfig.affectiveDialog,
+                inputTranscription: newConfig.inputTranscription,
+                outputTranscription: newConfig.outputTranscription,
                 enableVAD: newConfig.enableVAD,
                 silenceDuration: newConfig.silenceDuration,
                 prefixPadding: newConfig.prefixPadding,

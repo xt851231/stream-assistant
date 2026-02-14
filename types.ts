@@ -19,6 +19,7 @@ export interface AppConfig {
 
     // Feature Toggles
     proactiveAudio: boolean;
+    proactiveAudioInterval: number;
     inputTranscription: boolean;
     outputTranscription: boolean;
     googleGrounding: boolean;

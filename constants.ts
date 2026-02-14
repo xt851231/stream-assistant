@@ -5,6 +5,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     apiKey: '',
     modelId: 'gemini-2.5-flash-native-audio-preview-12-2025',
     proactiveAudio: false,
+    proactiveAudioInterval: 10000,
     inputTranscription: true,
     outputTranscription: true,
     googleGrounding: false,

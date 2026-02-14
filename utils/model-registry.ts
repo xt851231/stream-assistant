@@ -22,6 +22,7 @@ export const MODEL_REGISTRY: Record<string, any> = {
                 sections: [
                     { title: 'Connection', settings: ['apiKey', 'modelId'] },
                     { title: 'Behavior', settings: ['persona', 'systemInstructions', 'voice', 'temperature'] },
+                    { title: 'Features', settings: ['googleGrounding', 'inputTranscription', 'outputTranscription', 'proactiveAudio', 'proactiveAudioInterval', 'affectiveDialog'] },
                     { title: 'Client VAD', settings: ['enableVAD', 'silenceDuration', 'prefixPadding'] },
                     { title: 'Server VAD (Gemini Live)', settings: ['startSpeechSensitivity', 'endSpeechSensitivity'] }
                 ]
@@ -42,6 +43,7 @@ export const MODEL_REGISTRY: Record<string, any> = {
                 sections: [
                     { title: 'Connection', settings: ['apiKey', 'modelId'] },
                     { title: 'Behavior', settings: ['persona', 'systemInstructions', 'temperature'] },
+                    { title: 'Features', settings: ['affectiveDialog'] },
                     { title: 'Reasoning', settings: ['thinkingBudget', 'topP', 'topK'] },
                     { title: 'Client VAD', settings: ['enableVAD', 'silenceDuration', 'prefixPadding'] },
                 ]
@@ -59,7 +61,14 @@ export const FIELD_DEFINITIONS: Record<string, any> = {
     topP: { label: 'Top P', type: 'slider', min: 0, max: 1, step: 0.05, defaultValue: 0.95 },
     topK: { label: 'Top K', type: 'slider', min: 1, max: 100, step: 1, defaultValue: 64 },
     thinkingBudget: { label: 'Thinking Budget', type: 'slider', min: 0, max: 32768, step: 1024, defaultValue: 0 },
+    proactiveAudio: { label: 'Proactive Audio', type: 'checkbox', defaultValue: false },
+    proactiveAudioInterval: { label: 'Proactive Interval (ms)', type: 'slider', min: 1000, max: 60000, step: 1000, defaultValue: 10000 },
+    affectiveDialog: { label: 'Affective Dialog', type: 'checkbox', defaultValue: true },
+    inputTranscription: { label: 'Input Transcription', type: 'checkbox', defaultValue: true },
+    outputTranscription: { label: 'Output Transcription', type: 'checkbox', defaultValue: true },
+    googleGrounding: { label: 'Google Grounding', type: 'checkbox', defaultValue: false },
 
+    // VAD
     // VAD
     enableVAD: { label: 'Enable Client VAD', type: 'checkbox', defaultValue: true },
     silenceDuration: { label: 'Silence Duration (ms)', type: 'slider', min: 0, max: 5000, step: 100, defaultValue: 500 },

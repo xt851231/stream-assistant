@@ -1,6 +1,10 @@
 # Implementation Plan: Retro Game Persona System
 
 ## Phase 1: Foundation & Persona System
+- [ ] Task: Audit and Wire "Ghost" Configurations
+    - [ ] Reference `tasks/ghost_configs_audit.md` for full list of dead settings
+    - [ ] Update `GeminiLiveAdapter` and `GeminiFlashAdapter` to respect `temperature`, `topP`, `topK`, and `thinkingBudget`
+    - [ ] Connect `affectiveDialog` and transcription toggles to the API sessions
 - [ ] Task: Define Persona Types and React State Management
     - [ ] Write tests for persona state transitions in a new context provider
     - [ ] Implement `PersonaContext` and provider to manage active persona
@@ -9,10 +13,14 @@
     - [ ] Implement utility to generate system instructions for each persona (Immersion, Utility, Humor)
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Persona System' (Protocol in workflow.md)
 
-## Phase 2: Visual Perception & Dialogue Detection
+## Phase 2: Visual Perception & Proactive Commentary
 - [ ] Task: Implement Basic Screen Capture Utility
     - [ ] Write tests for media stream capture and frame extraction
     - [ ] Implement utility to capture frames from a video element or screen stream
+- [ ] Task: Wire `proactiveAudio` and Nudge Logic
+    - [ ] Implement "Silence Timer" in `LiveAPIContext.tsx` to detect dead air
+    - [ ] Implement `sendNudge()` in adapters to force AI response during proactive mode
+    - [ ] Update video streaming logic to decouple frames from mic activity when proactive mode is ON
 - [ ] Task: Integrate Dialogue Detection Trigger
     - [ ] Write tests for detecting "change" in dialogue regions (e.g., pixel delta or simple OCR)
     - [ ] Implement logic to trigger an AI event when new text is detected on-screen
