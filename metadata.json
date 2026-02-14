@@ -1,0 +1,8 @@
+{
+  "name": "Stream Quest Dashboard",
+  "description": "A retro JRPG-themed streaming assistant dashboard with interactive configuration, media controls, and real-time canvas annotation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
