@@ -340,3 +340,79 @@ In the `turn_complete` handler, use `setMessages` to mark the last message's `is
 **Key Changes:**
 - `contexts/LiveAPIContext.tsx`: Added `setMessages` update in `turn_complete` handler to set `isFinished: true` on the last message.
 
+## [2026-02-15 17:42] Fixed Game Audio Volume Slider Not Working
+
+**The Problem:**
+The "Game Audio Volume" slider in the Media Hub had no audible effect on game audio during screen sharing.
+
+**Root Cause:**
+Game audio from screen share played through **two independent paths**:
+1. The `<video>` element in `Stage.tsx` (NOT muted) — played audio directly at full volume, unaffected by any slider.
+2. `SpeechAudioContext.systemGainNode` (in `media-utils.js`) — correctly controlled by the slider.
+
+The `<video>` element's audio masked the gain node changes, making the slider appear broken.
+
+**The Solution:**
+Added `muted` attribute to the main `<video>` element in `Stage.tsx`. This ensures game audio only routes through the `SpeechAudioContext.systemGainNode` → `audioContext.destination` path, which the slider controls.
+
+Also confirmed: game audio is **isolated from the LLM stream**. The `ScreenCapture` class only sends JPEG frames via `sendImage()`. Audio routes exclusively to local playback and is never connected to the mic capture worklet.
+
+**Key Changes:**
+- `components/Stage.tsx`: Added `muted` to the main `<video>` element (line ~197).
+- `tests/game_audio_volume.test.js`: New test file verifying `SpeechAudioContext.setSystemVolume()` correctly updates the gain node.
+
+## [2026-02-15 17:50] Fixed Screen Share Button Not Lighting Up & Camera PIP Not Showing
+
+**The Problem:**
+1. The screen share button in the toolbar didn't visually indicate it was active (no highlight).
+2. When screen sharing was active, the camera stream didn't appear in the secondary screen (PIP) below the chat area.
+
+**Root Cause:**
+`screenSharing` was declared in the `LiveAPIContextType` interface and included in the `useMemo` dependency array, but was **missing from the actual `contextValue` object** in `LiveAPIContext.tsx`. This meant every consumer received `undefined` for `screenSharing`.
+
+In `App.tsx`:
+- Button highlight: `screenSharing ? 'bg-[#ffd700]' : 'bg-blue-900'` → always `bg-blue-900`
+- Camera PIP: `videoStream={screenSharing ? cameraStream : null}` → always `null`
+
+**The Solution:**
+Added `screenSharing` to the `contextValue` object in the `useMemo` call (line ~569).
+
+**Key Changes:**
+- `contexts/LiveAPIContext.tsx`: Added `screenSharing` to `contextValue` object.
+
+## [2026-02-15 18:03] Added Semantic Tags to App Containers & Fixed Chat-Feed Background
+
+**The Problem:**
+1. CSS selectors for key containers were extremely long (80+ chars) because most containers were generic `div` elements without IDs or semantic tags.
+2. The `#chat-feed` section had its own opaque background that covered the parent sidebar's background (with its backdrop-filter blur effect).
+
+**Root Cause:**
+- Container elements in `App.tsx` lacked semantic HTML tags or IDs.
+- `ChatSidebar.tsx` was an `<aside>` (same as its new parent wrapper), and `#chat-feed` had its own `backgroundColor` style.
+
+**The Solution:**
+1. **Semantic tags in `App.tsx`**: Added `id="viewport"` to root wrapper, `section#content-area` for main content, `nav[data-component=Toolbar]` for toolbar row, `#stage-area` for stage container, `aside#sidebar-panel` for sidebar wrapper.
+2. **ChatSidebar.tsx**: Changed root from `<aside>` to `<section>` (now nested inside `<aside#sidebar-panel>`). Removed individual background from `#chat-feed` so the parent sidebar's background shows through.
+
+**Key Changes:**
+- `App.tsx`: Added semantic tags and IDs to 6 container elements.
+- `components/ChatSidebar.tsx`: `aside` → `section`, removed `#chat-feed` background style.
+
+## [2026-02-15 18:19] Real Device Enumeration & Click-Outside-to-Close Menus
+
+**The Problem:**
+1. The Media Hub showed hardcoded dummy devices ("Yeti Stereo Microphone", "Logitech Brio") instead of real system devices.
+2. Neither the Media Hub nor Configuration Menu could be closed by clicking outside — only by pressing the toggle button again.
+
+**Root Cause:**
+- Device `<select>` elements had hardcoded `<option>` tags instead of using `navigator.mediaDevices.enumerateDevices()`.
+- No click-outside event handler existed on either menu.
+
+**The Solution:**
+1. **Device enumeration:** Added `useEffect` that calls `enumerateDevices()` when the menu opens, filters by `audioinput`/`videoinput`, and sets state. Added `devicechange` event listener for hot-plug support. Requests `getUserMedia` first to get device labels.
+2. **Click-outside close:** Both menus now attach a `mousedown` listener on `document` (deferred via `setTimeout(0)` to avoid closing on the same click). Uses `ref.contains(target)` to detect outside clicks.
+
+**Key Changes:**
+- `components/MediaControlHub.tsx`: Replaced dummy options with `enumerateDevices()`, added `devicechange` listener, added click-outside ref + handler.
+- `components/ConfigurationMenu.tsx`: Added `panelRef`, click-outside handler (also excludes the trigger button from closing).
+

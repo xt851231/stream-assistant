@@ -79,7 +79,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ messages, onSendMessage, onCl
     }, [input, onSendMessage]);
 
     return (
-        <aside
+        <section
             data-component="ChatSidebar"
             className="w-full h-full bg-[#0c1219] border-2 border-[#2b6cee] rounded-xl flex flex-col z-10 shadow-lg overflow-hidden relative min-h-0 transition-colors duration-300"
             style={style}
@@ -111,9 +111,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ messages, onSendMessage, onCl
                 id="chat-feed"
                 aria-label="Chat Feed"
                 className="flex-1 overflow-y-auto p-3 space-y-4 relative scroll-smooth min-h-0 transition-colors duration-300"
-                style={{
-                    backgroundColor: getBgColor('#111722', themeConfig?.opacity?.chatFeed || 0.8)
-                }}
             >
                 {messages.map((msg) => (
                     <ChatMessage key={msg.id} message={msg} themeConfig={themeConfig} />
@@ -167,7 +164,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ messages, onSendMessage, onCl
                     </div>
                 </div>
             )}
-        </aside>
+        </section>
     );
 };
 

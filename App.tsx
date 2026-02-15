@@ -159,9 +159,11 @@ const App: React.FC = () => {
             toggleVideo(newConfig.videoEnabled, newConfig.cameraId || 'default', config);
         }
 
-        // Screen Share
-        if (newConfig.screenShareEnabled !== screenSharing) {
-            toggleScreen(newConfig.screenShareEnabled, config);
+        // Screen Share - Now passing screenAudio preference
+        if (newConfig.screenShareEnabled !== screenSharing ||
+            (screenSharing && newConfig.screenAudio !== mediaConfig.screenAudio)) {
+            // Note: toggleScreen will need to handle restarting if screenAudio changed while active
+            toggleScreen(newConfig.screenShareEnabled, config, newConfig.screenAudio);
         }
     };
 
@@ -204,7 +206,7 @@ const App: React.FC = () => {
 
 
     return (
-        <div className="w-screen h-screen bg-[#050505] flex items-center justify-center overflow-hidden relative">
+        <div id="viewport" className="w-screen h-screen bg-[#050505] flex items-center justify-center overflow-hidden relative">
             {/* Custom Background Image Layer */}
             {themeConfig.backgroundImage && (
                 <div
@@ -304,11 +306,11 @@ const App: React.FC = () => {
                 </header>
 
                 {/* Main Content Flex with Gap and Padding + Background Image */}
-                <div
+                <section
+                    id="content-area"
                     className="flex-1 flex overflow-hidden p-6 relative transition-colors duration-300"
                     style={{
                         backgroundColor: themeConfig.backgroundImage ? 'rgba(17, 23, 34, 0.3)' : '#111722',
-                        // backgroundImage: 'linear-gradient(rgba(17, 23, 34, 0.9), rgba(17, 23, 34, 0.95))'
                     }}
                 >
 
@@ -324,8 +326,10 @@ const App: React.FC = () => {
                         <div className="flex-1 flex flex-col p-4 overflow-hidden">
 
                             {/* Toolbar Row */}
-                            <div className="flex justify-between items-center mb-4 shrink-0 p-2 rounded-lg transition-colors duration-300"
-                                style={{ backgroundColor: getBgColor('#000000', themeConfig.opacity.toolbar * 0.5) }} // Darken slightly
+                            <nav
+                                data-component="Toolbar"
+                                className="flex justify-between items-center mb-4 shrink-0 p-2 rounded-lg transition-colors duration-300"
+                                style={{ backgroundColor: getBgColor('#000000', themeConfig.opacity.toolbar * 0.5) }}
                             >
                                 <div className="relative px-4 py-2 min-w-[280px]">
                                     <div className="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-blue-800/50 to-transparent border-l-4 border-[#ffd700] transform skew-x-[-12deg] rounded-r-lg"></div>
@@ -369,7 +373,7 @@ const App: React.FC = () => {
                                         <Mic size={18} className={audioStreaming ? 'text-black' : 'text-white'} />
                                     </button>
                                     <button
-                                        onClick={() => toggleScreen(!screenSharing, config)}
+                                        onClick={() => toggleScreen(!screenSharing, config, mediaConfig.screenAudio)}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${screenSharing ? 'bg-[#ffd700] border-white' : 'bg-blue-900'}`}
                                     >
                                         <Monitor size={18} className={screenSharing ? 'text-black' : 'text-white'} />
@@ -393,10 +397,10 @@ const App: React.FC = () => {
                                         themeConfig={themeConfig}
                                     />
                                 </div>
-                            </div>
+                            </nav>
 
                             {/* Stage & Tools */}
-                            <div className="flex-1 min-h-0 flex flex-col">
+                            <div id="stage-area" className="flex-1 min-h-0 flex flex-col">
                                 <Stage
                                     tool={tool}
                                     color={color}
@@ -425,8 +429,8 @@ const App: React.FC = () => {
                     </main>
 
                     {/* Sidebar Container with Transition */}
-                    <div
-                        data-component="SidebarWrapper"
+                    <aside
+                        id="sidebar-panel"
                         className={`flex flex-col shrink-0 h-full transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden ${isChatOpen
                             ? 'w-[22%] ml-6 translate-x-0'
                             : 'w-0 ml-0 translate-x-10'
@@ -446,8 +450,8 @@ const App: React.FC = () => {
                                 backdropFilter: themeConfig?.backgroundImage ? `blur(${(themeConfig?.blur || 0) / 2}px)` : 'none'
                             }}
                         />
-                    </div>
-                </div>
+                    </aside>
+                </section>
             </div>
             {/* Global Configuration Menu - Moved to root to avoid clipping */}
             <ConfigurationMenu

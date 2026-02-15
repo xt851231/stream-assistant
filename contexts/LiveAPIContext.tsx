@@ -15,7 +15,7 @@ interface LiveAPIContextType {
     sendMessage: (text: string, config: AppConfig) => void;
     toggleAudio: (enabled: boolean, micId: string, config: AppConfig) => Promise<void>;
     toggleVideo: (enabled: boolean, camId: string, config: AppConfig) => Promise<void>;
-    toggleScreen: (enabled: boolean, config: AppConfig) => Promise<void>;
+    toggleScreen: (enabled: boolean, config: AppConfig, screenAudio?: boolean) => Promise<void>;
     messages: Message[];
     audioStreaming: boolean;
     videoStreaming: boolean;
@@ -411,13 +411,15 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         }
     };
 
-    const toggleScreen = async (enabled: boolean, config: AppConfig) => {
+    const toggleScreen = async (enabled: boolean, config: AppConfig, screenAudio?: boolean) => {
         if (enabled) {
             if (!screenCaptureRef.current && clientRef.current) {
                 screenCaptureRef.current = new ScreenCapture(clientRef.current);
             }
             if (screenCaptureRef.current) {
-                const video = await screenCaptureRef.current.start();
+                const video = await screenCaptureRef.current.start({
+                    audio: screenAudio
+                });
                 setScreenSharing(true);
 
                 // Apply overlay if available
@@ -564,6 +566,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         messages,
         audioStreaming,
         videoStreaming,
+        screenSharing,
         videoStream,
         cameraStream,
         setOverlayCanvas,

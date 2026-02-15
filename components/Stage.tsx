@@ -195,6 +195,7 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
                         ref={videoRef}
                         autoPlay
                         playsInline
+                        muted
                         className="w-full h-full object-cover"
                     />
                 </div>

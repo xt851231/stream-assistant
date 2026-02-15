@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, useEffect } from 'react';
+import React, { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AppConfig, ThemeConfig } from '../types';
 import { MODEL_REGISTRY, PROVIDERS, FIELD_DEFINITIONS, PERSONAS, VOICES } from '../utils/model-registry';
@@ -20,6 +20,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
 
     const [activeTab, setActiveTab] = useState<string>(currentModel.uiGroups[0]?.id || 'system');
     const [position, setPosition] = useState({ top: 0, right: 0 });
+    const panelRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
         if (activeTab !== 'appearance' && !currentModel.uiGroups.find((g: any) => g.id === activeTab)) {
@@ -47,6 +48,28 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
             };
         }
     }, [isOpen, triggerRef]);
+
+    // Click outside to close
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as Node;
+            if (panelRef.current && !panelRef.current.contains(target) &&
+                triggerRef?.current && !triggerRef.current.contains(target)) {
+                onClose();
+            }
+        };
+
+        const timer = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+        }, 0);
+
+        return () => {
+            clearTimeout(timer);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen, onClose, triggerRef]);
 
     if (!isOpen) return null;
 
@@ -229,6 +252,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
 
     return createPortal(
         <aside
+            ref={panelRef}
             aria-label="Configuration Menu"
             role="dialog"
             data-component="ConfigurationMenu"
