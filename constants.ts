@@ -30,7 +30,9 @@ export const DEFAULT_MEDIA_CONFIG: MediaConfig = {
     audioEnabled: true,
     videoEnabled: true,
     screenShareEnabled: false,
-    volume: 80,
+    aiVolume: 80,
+    systemVolume: 50,
+    screenAudio: true,
 };
 
 export const DEFAULT_THEME_CONFIG: ThemeConfig = {

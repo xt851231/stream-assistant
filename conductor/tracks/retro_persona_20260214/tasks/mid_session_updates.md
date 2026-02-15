@@ -1,4 +1,4 @@
-# Task: Mid-Session Persona Updates (Gemini Flash & Live)
+# Task: Mid-Session Persona Updates (Gemini Flash & Live) [DONE]
 
 ## Objective
 Enable "hot-swapping" the AI persona mid-conversation without disconnecting or losing session state.

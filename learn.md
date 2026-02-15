@@ -1,5 +1,31 @@
 # Learnings
 
+## [2026-02-16 00:15] Isolated Screen Audio and Project Knowledge Codification
+
+**The Problem:**
+- Game/System audio during screen sharing played at full volume through the browser's default path, bypassing the dashboard's volume controls.
+- Screen audio was not being captured or routed correctly for local playback (e.g., for streamers using OBS).
+- Repetitive architectural mistakes (like missing state sync in `useMemo`) were slowing down development and requiring manual correction.
+
+**Root Cause:**
+- The `ScreenCapture` class explicitly disabled audio capture in `getDisplayMedia`.
+- `SpeechAudioContext` only had a single gain node for AI voice, lacking a separate path for system sounds.
+- Project-specific best practices were buried in the long `learn.md` file but not actively enforced by the editor's context.
+
+**The Solution:**
+1. **Audio Path Isolation**: Enhanced `SpeechAudioContext` with a dedicated `systemGainNode`. This allows independent volume control for "AI Voice" vs "Game Audio".
+2. **Screen Capture Routing**: Updated `ScreenCapture` to request audio tracks and route them exclusively to the `systemGainNode` for local playback. Critically, this audio is kept isolated from the capture worklet to prevent the AI from hearing itself or the game (avoiding echo/confusion).
+3. **Volume Split**: Refactored `MediaConfig` to separate `aiVolume` and `systemVolume`, enabling granular UI control.
+4. **Knowledge Codification**: Created `.cursorrules` to distill critical project patterns (State Integrity, Media Path Isolation, Aspect Ratio Sensitivity) into a format the AI can actively use during development.
+
+**Key Changes:**
+- `lib/utils/media-utils.js`: Added audio support to `ScreenCapture` with isolated routing.
+- `lib/utils/SpeechAudioContext.js`: Implemented `systemGainNode` and `setSystemVolume`.
+- `types.ts` & `constants.ts`: Split `volume` into `aiVolume` and `systemVolume`.
+- `.cursorrules`: New file with architectural and UI guidelines.
+- `conductor/`: Updated track metadata and task documentation for audio isolation.
+
+
 ## [2026-02-11 00:40] Extended Theme System and UI Refinements
 
 **The Problem:** 

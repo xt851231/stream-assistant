@@ -1,0 +1,25 @@
+# Dashboard Project Rules & Best Practices
+
+Derived from project history and common pitfalls documented in `learn.md`.
+
+## 1. Context & State Integrity
+*   **The "Triple Link" Rule**: When adding new state or properties to `LiveAPIContext.tsx`, you MUST ensure it is defined in three places:
+    1.  The `LiveAPIContextType` interface.
+    2.  The `useMemo` value object.
+    3.  The `useMemo` dependency array.
+*   **Sync Logic**: In `App.tsx`, when syncing local configuration to the Live Context, use a `useRef` guard to compare old vs. new values. This prevents infinite reconnect loops during the connection lifecycle.
+
+## 2. Media & Audio Handling
+*   **Path Isolation**: If you are routing an audio track through a `GainNode` (e.g., for custom volume control), the source `<video>` or `<audio>` element MUST be set to `muted`. Failure to do so causes audio to "leak" at full volume, bypassing the slider.
+*   **Hardware Devices**: Always use `navigator.mediaDevices.enumerateDevices()` for microphone and camera lists. Never use hardcoded dummy options.
+*   **Hot-Plugging**: Attach a `devicechange` listener to `navigator.mediaDevices` when a device selection menu is open to ensure the list stays current if hardware is plugged/unplugged.
+
+## 3. UI & Layout
+*   **Clipping Prevention**: Use `React.createPortal` for all floating menus, hub overlays, and dropdowns. This ensures they aren't cut off by parent containers using `overflow: hidden`.
+*   **Aspect Ratio Sensitivity**: The dashboard uses a strict 16:9 aspect ratio. When calculating drawing coordinates or resizing a canvas, always bind `ResizeObservers` to the inner-most `.aspect-video` wrapper, NOT the outer flex container.
+*   **Semantic Structure**: Use semantic HTML tags (`<aside>`, `<nav>`, `<section>`, `<header>`, `<footer>`) and descriptive IDs for major containers. This keeps CSS selectors manageable and improves DOM readability.
+*   **Click-Outside**: All modal-like menus (Media Hub, Config Menu) should implement a `mousedown` listener on `document` with a ref-check to close when clicking outside.
+
+## 4. API & Adapters
+*   **Singular vs Plural Mapping**: The application state often uses `systemInstructions` (plural), but some API adapters expect `systemInstruction` (singular). Ensure correct mapping in `updateConfig` methods.
+*   **Live API Setup**: The Gemini Live API only accepts the `setup` message as the FIRST message. To update core identity (persona/voice) mid-session, you must disconnect and reconnect the adapter rather than sending a new setup message.

@@ -1,10 +1,10 @@
 # Implementation Plan: Retro Game Persona System
 
 ## Phase 1: Foundation & Persona System
-- [ ] Task: Audit and Wire "Ghost" Configurations
-    - [ ] Reference `tasks/ghost_configs_audit.md` for full list of dead settings
-    - [ ] Update `GeminiLiveAdapter` and `GeminiFlashAdapter` to respect `temperature`, `topP`, `topK`, and `thinkingBudget`
-    - [ ] Connect `affectiveDialog` and transcription toggles to the API sessions
+- [x] Task: Audit and Wire "Ghost" Configurations
+    - [x] Reference `tasks/ghost_configs_audit.md` for full list of dead settings
+    - [x] Update `GeminiLiveAdapter` and `GeminiFlashAdapter` to respect `temperature`, `topP`, `topK`, and `thinkingBudget`
+    - [x] Connect `affectiveDialog` and transcription toggles to the API sessions
 - [ ] Task: Define Persona Types and React State Management
     - [ ] Write tests for persona state transitions in a new context provider
     - [ ] Implement `PersonaContext` and provider to manage active persona

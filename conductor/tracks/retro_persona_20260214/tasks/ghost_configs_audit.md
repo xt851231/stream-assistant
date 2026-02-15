@@ -1,4 +1,4 @@
-# Task: Investigation of Ghost Configurations & Proactive Commentary
+# Task: Investigation of Ghost Configurations & Proactive Commentary [DONE]
 
 ## Objective
 Document current architectural gaps where UI settings and configuration flags are not functionally connected to the AI adapters, specifically preventing "Proactive Commentary" behavior.
