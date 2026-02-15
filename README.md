@@ -18,3 +18,34 @@ View your app in AI Studio: https://ai.studio/apps/temp/1
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Troubleshooting & Logging
+
+This application uses a custom logger to help debug issues while reducing console noise during normal operation.
+
+### How to Enable Debug Logs
+
+The default log level is `info`. To see more detailed logs (e.g., streaming events, media status changes), you can change the log level directly in your browser's Developer Tools Console:
+
+1.  Open Developer Tools (F12 or Ctrl+Shift+I).
+2.  Go to the **Console** tab.
+3.  Run the following command:
+    ```javascript
+    localStorage.setItem('log_level', 'debug');
+    ```
+4.  Refresh the page.
+
+### Available Log Levels
+
+You can set `log_level` to any of the following:
+
+*   `debug`: Detailed debugging information.
+*   `info`: Standard operational messages (default).
+*   `warn`: Warnings only.
+*   `error`: Critical errors only.
+*   `none`: Disable all logs.
+
+To revert to the default setting, run:
+```javascript
+localStorage.removeItem('log_level');
+```
