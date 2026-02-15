@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AppConfig, MediaConfig, ConnectionState, Message, ThemeConfig } from './types';
 import { DEFAULT_CONFIG, DEFAULT_MEDIA_CONFIG, INITIAL_MESSAGES, DEFAULT_THEME_CONFIG } from './constants';
 import ConfigurationMenu from './components/ConfigurationMenu';
@@ -8,6 +8,17 @@ import Toolbelt from './components/Toolbelt';
 import ChatSidebar from './components/ChatSidebar';
 import { useLiveAPI } from './hooks/useLiveAPI';
 import { Swords, Zap, Settings, Video, Mic, Monitor, MessageSquare } from 'lucide-react';
+import { logger } from './lib/utils/logger';
+
+// Helper to get helper RBGA color with opacity
+const getBgColor = (baseColorHex: string, opacity: number) => {
+    // Simple hex to rgba conversion
+    const hex = baseColorHex.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
 
 const App: React.FC = () => {
     // Context
@@ -39,7 +50,7 @@ const App: React.FC = () => {
                 return { ...DEFAULT_CONFIG, ...parsed };
             }
         } catch (e) {
-            console.error("Failed to load config from localStorage", e);
+            logger.error("Failed to load config from localStorage", e);
         }
         return DEFAULT_CONFIG;
     });
@@ -53,7 +64,7 @@ const App: React.FC = () => {
                 return { ...DEFAULT_MEDIA_CONFIG, ...parsed, screenShareEnabled: false };
             }
         } catch (e) {
-            console.error("Failed to load media config", e);
+            logger.error("Failed to load media config", e);
         }
         return DEFAULT_MEDIA_CONFIG;
     });
@@ -66,7 +77,7 @@ const App: React.FC = () => {
                 return { ...DEFAULT_THEME_CONFIG, ...parsed };
             }
         } catch (e) {
-            console.error("Failed to load theme config", e);
+            logger.error("Failed to load theme config", e);
         }
         return DEFAULT_THEME_CONFIG;
     });
@@ -128,22 +139,21 @@ const App: React.FC = () => {
     const settingsButtonRef = React.useRef<HTMLButtonElement>(null);
 
     // Handlers
-    const handleConnect = async () => {
+    const handleConnect = React.useCallback(async () => {
         if (connected) {
             await disconnect();
         } else {
             await connect(config);
         }
-    };
+    }, [connected, disconnect, connect, config]);
 
-    const handleSendMessage = (text: string) => {
+    const handleSendMessage = React.useCallback((text: string) => {
         sendMessage(text, config);
-    };
+    }, [sendMessage, config]);
 
-    // Media Handlers
     // Media Handlers
     const handleMediaConfigChange = (newConfig: MediaConfig) => {
-        console.log('🔧 handleMediaConfigChange:', newConfig);
+        logger.debug('🔧 handleMediaConfigChange:', newConfig);
         setMediaConfig(newConfig);
 
         // Direct Toggle Logic - Source of Truth is the Context
@@ -169,40 +179,50 @@ const App: React.FC = () => {
 
     // Calculate effective config regarding active states from Context
     // This ensures the UI always reflects the REAL state, not just the local config
-    const effectiveMediaConfig: MediaConfig = {
+    const effectiveMediaConfig: MediaConfig = useMemo(() => ({
         ...mediaConfig,
         audioEnabled: audioStreaming,
         videoEnabled: videoStreaming,
         screenShareEnabled: screenSharing
-    };
+    }), [mediaConfig, audioStreaming, videoStreaming, screenSharing]);
 
-    /* 
-       Refactor Note: 
-       Removed previous existing Media Config Sync useEffect. 
-       We now trigger toggles directly in the handler, and derive UI state from context.
-       This prevents state desync and "Permission denied" loops on reload.
-    */
-
-    // ...
-
-
-
-    const triggerClearStage = () => {
+    const triggerClearStage = React.useCallback(() => {
         // Dispatch custom event for Stage component
         const event = new Event('STAGE_CLEAR');
         document.dispatchEvent(event);
-    };
+    }, []);
 
-    // Helper to get helper RBGA color with opacity
-    const getBgColor = (baseColorHex: string, opacity: number) => {
-        // Simple hex to rgba conversion
-        const hex = baseColorHex.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    };
+    // Memoize Styles to prevent re-renders
+    const headerStyle = useMemo(() => ({
+        backgroundColor: getBgColor('#0a0f16', themeConfig.opacity.header),
+        backdropFilter: themeConfig.backgroundImage ? `blur(${themeConfig.blur / 2}px)` : 'none'
+    }), [themeConfig.opacity.header, themeConfig.backgroundImage, themeConfig.blur]);
 
+    const contentAreaStyle = useMemo(() => ({
+        backgroundColor: themeConfig.backgroundImage ? 'rgba(17, 23, 34, 0.3)' : '#111722',
+    }), [themeConfig.backgroundImage]);
+
+    const mainStyle = useMemo(() => ({
+        backgroundColor: getBgColor('#05080c', themeConfig.opacity.workspaceBackground),
+        backdropFilter: themeConfig.backgroundImage ? `blur(${themeConfig.blur / 2}px)` : 'none'
+    }), [themeConfig.opacity.workspaceBackground, themeConfig.backgroundImage, themeConfig.blur]);
+
+    const toolbarStyle = useMemo(() => ({
+        backgroundColor: getBgColor('#000000', themeConfig.opacity.toolbar * 0.5)
+    }), [themeConfig.opacity.toolbar]);
+
+    const stageStyle = useMemo(() => ({
+        backgroundColor: getBgColor('#000000', themeConfig?.opacity?.mainStage || 0.8)
+    }), [themeConfig?.opacity?.mainStage]);
+
+    const sidebarContainerStyle = useMemo(() => ({
+        opacity: isChatOpen ? 1 : 0,
+    }), [isChatOpen]);
+
+    const sidebarContentStyle = useMemo(() => ({
+        backgroundColor: getBgColor('#05080c', themeConfig?.opacity?.sidebar || 0.9),
+        backdropFilter: themeConfig?.backgroundImage ? `blur(${(themeConfig?.blur || 0) / 2}px)` : 'none'
+    }), [themeConfig?.opacity?.sidebar, themeConfig?.backgroundImage, themeConfig?.blur]);
 
 
     return (
@@ -254,12 +274,7 @@ const App: React.FC = () => {
                 <header
                     data-component="AppHeader"
                     className="h-[8%] shrink-0 z-40 px-4 py-1 border-b-4 border-[#2b6cee] flex items-center justify-between shadow-lg relative bg-cover bg-center transition-colors duration-300"
-                    style={{
-                        backgroundColor: getBgColor('#0a0f16', themeConfig.opacity.header),
-                        // Only show gradient if no background or high opacity? Keeping it simple for now
-                        // backgroundImage: 'linear-gradient(to bottom, rgba(10, 15, 22, 0.8), rgba(10, 15, 22, 0.9))'
-                        backdropFilter: themeConfig.backgroundImage ? `blur(${themeConfig.blur / 2}px)` : 'none'
-                    }}
+                    style={headerStyle}
                 >
 
                     {/* Branding */}
@@ -309,17 +324,12 @@ const App: React.FC = () => {
                 <section
                     id="content-area"
                     className="flex-1 flex overflow-hidden p-6 relative transition-colors duration-300"
-                    style={{
-                        backgroundColor: themeConfig.backgroundImage ? 'rgba(17, 23, 34, 0.3)' : '#111722',
-                    }}
+                    style={contentAreaStyle}
                 >
 
                     {/* Workspace Panel */}
                     <main data-component="AppMain" className="flex-1 flex flex-col min-w-0 rounded-xl border-2 border-[#2b6cee] shadow-2xl relative overflow-hidden transition-all duration-500"
-                        style={{
-                            backgroundColor: getBgColor('#05080c', themeConfig.opacity.workspaceBackground),
-                            backdropFilter: themeConfig.backgroundImage ? `blur(${themeConfig.blur / 2}px)` : 'none'
-                        }}
+                        style={mainStyle}
                     >
 
                         {/* Inner Container */}
@@ -329,7 +339,7 @@ const App: React.FC = () => {
                             <nav
                                 data-component="Toolbar"
                                 className="flex justify-between items-center mb-4 shrink-0 p-2 rounded-lg transition-colors duration-300"
-                                style={{ backgroundColor: getBgColor('#000000', themeConfig.opacity.toolbar * 0.5) }}
+                                style={toolbarStyle}
                             >
                                 <div className="relative px-4 py-2 min-w-[280px]">
                                     <div className="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-blue-800/50 to-transparent border-l-4 border-[#ffd700] transform skew-x-[-12deg] rounded-r-lg"></div>
@@ -409,9 +419,7 @@ const App: React.FC = () => {
                                     videoStream={videoStream}
                                     onCanvasReady={setOverlayCanvas}
                                     themeConfig={themeConfig}
-                                    style={{
-                                        backgroundColor: getBgColor('#000000', themeConfig?.opacity?.mainStage || 0.8)
-                                    }}
+                                    style={stageStyle}
                                 />
 
                                 <Toolbelt
@@ -435,9 +443,7 @@ const App: React.FC = () => {
                             ? 'w-[22%] ml-6 translate-x-0'
                             : 'w-0 ml-0 translate-x-10'
                             }`}
-                        style={{
-                            opacity: isChatOpen ? 1 : 0, // Control visibility animation
-                        }}
+                        style={sidebarContainerStyle}
                     >
                         <ChatSidebar
                             messages={messages}
@@ -445,10 +451,7 @@ const App: React.FC = () => {
                             onClose={() => setIsChatOpen(false)}
                             videoStream={screenSharing ? cameraStream : null}
                             themeConfig={themeConfig}
-                            style={{
-                                backgroundColor: getBgColor('#05080c', themeConfig?.opacity?.sidebar || 0.9),
-                                backdropFilter: themeConfig?.backgroundImage ? `blur(${(themeConfig?.blur || 0) / 2}px)` : 'none'
-                            }}
+                            style={sidebarContentStyle}
                         />
                     </aside>
                 </section>

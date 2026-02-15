@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pen, Eraser, Pipette, Trash2 } from 'lucide-react';
+import { Pen, Eraser, Trash2 } from 'lucide-react';
 import { ThemeConfig } from '../types';
 
 interface ToolbeltProps {
@@ -87,4 +87,4 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
     );
 };
 
-export default Toolbelt;
+export default React.memo(Toolbelt);

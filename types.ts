@@ -90,4 +90,7 @@ export interface MediaConfig {
     videoEnabled: boolean;
     screenShareEnabled: boolean;
     volume: number;
+    aiVolume: number;
+    systemVolume: number;
+    screenAudio: boolean;
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Message, ThemeConfig } from '../types';
-import { X, Send, Crown, Bot } from 'lucide-react';
+import { X, Send } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 
 interface ChatSidebarProps {
@@ -60,6 +60,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ messages, onSendMessage, onCl
         };
     }, [videoStream]);
 
+    // Only scroll when messages length changes or last message content changes significantly?
+    // Actually, just scrolling on every message update is standard for chat.
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
@@ -168,4 +170,4 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ messages, onSendMessage, onCl
     );
 };
 
-export default ChatSidebar;
+export default React.memo(ChatSidebar);
