@@ -265,4 +265,4 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
     );
 };
 
-export default MediaControlHub;
+export default React.memo(MediaControlHub);

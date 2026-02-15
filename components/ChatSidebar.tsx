@@ -168,4 +168,4 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ messages, onSendMessage, onCl
     );
 };
 
-export default ChatSidebar;
+export default React.memo(ChatSidebar);

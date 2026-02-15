@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { AppConfig, MediaConfig, ConnectionState, Message, ThemeConfig } from './types';
 import { DEFAULT_CONFIG, DEFAULT_MEDIA_CONFIG, INITIAL_MESSAGES, DEFAULT_THEME_CONFIG } from './constants';
 import ConfigurationMenu from './components/ConfigurationMenu';
@@ -8,6 +8,16 @@ import Toolbelt from './components/Toolbelt';
 import ChatSidebar from './components/ChatSidebar';
 import { useLiveAPI } from './hooks/useLiveAPI';
 import { Swords, Zap, Settings, Video, Mic, Monitor, MessageSquare } from 'lucide-react';
+
+// Helper to get helper RBGA color with opacity
+const getBgColor = (baseColorHex: string, opacity: number) => {
+    // Simple hex to rgba conversion
+    const hex = baseColorHex.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
 
 const App: React.FC = () => {
     // Context
@@ -128,21 +138,21 @@ const App: React.FC = () => {
     const settingsButtonRef = React.useRef<HTMLButtonElement>(null);
 
     // Handlers
-    const handleConnect = async () => {
+    const handleConnect = useCallback(async () => {
         if (connected) {
             await disconnect();
         } else {
             await connect(config);
         }
-    };
+    }, [connected, disconnect, connect, config]);
 
-    const handleSendMessage = (text: string) => {
+    const handleSendMessage = useCallback((text: string) => {
         sendMessage(text, config);
-    };
+    }, [sendMessage, config]);
 
     // Media Handlers
     // Media Handlers
-    const handleMediaConfigChange = (newConfig: MediaConfig) => {
+    const handleMediaConfigChange = useCallback((newConfig: MediaConfig) => {
         console.log('🔧 handleMediaConfigChange:', newConfig);
         setMediaConfig(newConfig);
 
@@ -165,45 +175,58 @@ const App: React.FC = () => {
             // Note: toggleScreen will need to handle restarting if screenAudio changed while active
             toggleScreen(newConfig.screenShareEnabled, config, newConfig.screenAudio);
         }
-    };
+    }, [mediaConfig, audioStreaming, toggleAudio, config, videoStreaming, toggleVideo, screenSharing, toggleScreen]);
 
     // Calculate effective config regarding active states from Context
     // This ensures the UI always reflects the REAL state, not just the local config
-    const effectiveMediaConfig: MediaConfig = {
+    const effectiveMediaConfig = useMemo(() => ({
         ...mediaConfig,
         audioEnabled: audioStreaming,
         videoEnabled: videoStreaming,
         screenShareEnabled: screenSharing
-    };
+    }), [mediaConfig, audioStreaming, videoStreaming, screenSharing]);
 
-    /* 
-       Refactor Note: 
-       Removed previous existing Media Config Sync useEffect. 
-       We now trigger toggles directly in the handler, and derive UI state from context.
-       This prevents state desync and "Permission denied" loops on reload.
-    */
-
-    // ...
-
-
-
-    const triggerClearStage = () => {
+    const triggerClearStage = useCallback(() => {
         // Dispatch custom event for Stage component
         const event = new Event('STAGE_CLEAR');
         document.dispatchEvent(event);
-    };
+    }, []);
 
-    // Helper to get helper RBGA color with opacity
-    const getBgColor = (baseColorHex: string, opacity: number) => {
-        // Simple hex to rgba conversion
-        const hex = baseColorHex.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    };
+    const toggleConfigMenu = useCallback(() => {
+        setIsConfigOpen(prev => !prev);
+        setIsMediaOpen(false);
+    }, []);
 
+    const toggleMediaMenu = useCallback(() => {
+        setIsMediaOpen(prev => !prev);
+        setIsConfigOpen(false);
+    }, []);
 
+    const handleToggleAudio = useCallback(() => {
+        toggleAudio(!audioStreaming, 'default', config);
+    }, [audioStreaming, config, toggleAudio]);
+
+    const handleToggleScreen = useCallback(() => {
+        toggleScreen(!screenSharing, config, mediaConfig.screenAudio);
+    }, [screenSharing, config, mediaConfig.screenAudio, toggleScreen]);
+
+    const toggleChat = useCallback(() => {
+        setIsChatOpen(prev => !prev);
+    }, []);
+
+    const handleCloseMedia = useCallback(() => setIsMediaOpen(false), []);
+    const handleCloseChat = useCallback(() => setIsChatOpen(false), []);
+    const handleCloseConfig = useCallback(() => setIsConfigOpen(false), []);
+
+    // Memoize styles
+    const stageStyle = useMemo(() => ({
+        backgroundColor: getBgColor('#000000', themeConfig?.opacity?.mainStage || 0.8)
+    }), [themeConfig?.opacity?.mainStage]);
+
+    const chatSidebarStyle = useMemo(() => ({
+        backgroundColor: getBgColor('#05080c', themeConfig?.opacity?.sidebar || 0.9),
+        backdropFilter: themeConfig?.backgroundImage ? `blur(${(themeConfig?.blur || 0) / 2}px)` : 'none'
+    }), [themeConfig?.opacity?.sidebar, themeConfig?.backgroundImage, themeConfig?.blur]);
 
     return (
         <div id="viewport" className="w-screen h-screen bg-[#050505] flex items-center justify-center overflow-hidden relative">
@@ -353,33 +376,33 @@ const App: React.FC = () => {
                                 <div className="flex gap-2 items-center relative z-50">
                                     <button
                                         ref={settingsButtonRef}
-                                        onClick={() => { setIsConfigOpen(!isConfigOpen); setIsMediaOpen(false); }}
+                                        onClick={toggleConfigMenu}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isConfigOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
                                             }`}
                                     >
                                         <Settings size={18} className={isConfigOpen ? 'text-black' : 'text-white'} />
                                     </button>
                                     <button
-                                        onClick={() => { setIsMediaOpen(!isMediaOpen); setIsConfigOpen(false); }}
+                                        onClick={toggleMediaMenu}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isMediaOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
                                             }`}
                                     >
                                         <Video size={18} className={isMediaOpen ? 'text-black' : 'text-white'} />
                                     </button>
                                     <button
-                                        onClick={() => toggleAudio(!audioStreaming, 'default', config)}
+                                        onClick={handleToggleAudio}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${audioStreaming ? 'bg-[#ffd700] border-white' : 'bg-blue-900'}`}
                                     >
                                         <Mic size={18} className={audioStreaming ? 'text-black' : 'text-white'} />
                                     </button>
                                     <button
-                                        onClick={() => toggleScreen(!screenSharing, config, mediaConfig.screenAudio)}
+                                        onClick={handleToggleScreen}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${screenSharing ? 'bg-[#ffd700] border-white' : 'bg-blue-900'}`}
                                     >
                                         <Monitor size={18} className={screenSharing ? 'text-black' : 'text-white'} />
                                     </button>
                                     <button
-                                        onClick={() => setIsChatOpen(!isChatOpen)}
+                                        onClick={toggleChat}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isChatOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
                                             }`}
                                         title="Toggle Chat"
@@ -393,7 +416,7 @@ const App: React.FC = () => {
                                         isOpen={isMediaOpen}
                                         config={effectiveMediaConfig}
                                         onConfigChange={handleMediaConfigChange}
-                                        onClose={() => setIsMediaOpen(false)}
+                                        onClose={handleCloseMedia}
                                         themeConfig={themeConfig}
                                     />
                                 </div>
@@ -409,9 +432,7 @@ const App: React.FC = () => {
                                     videoStream={videoStream}
                                     onCanvasReady={setOverlayCanvas}
                                     themeConfig={themeConfig}
-                                    style={{
-                                        backgroundColor: getBgColor('#000000', themeConfig?.opacity?.mainStage || 0.8)
-                                    }}
+                                    style={stageStyle}
                                 />
 
                                 <Toolbelt
@@ -442,13 +463,10 @@ const App: React.FC = () => {
                         <ChatSidebar
                             messages={messages}
                             onSendMessage={handleSendMessage}
-                            onClose={() => setIsChatOpen(false)}
+                            onClose={handleCloseChat}
                             videoStream={screenSharing ? cameraStream : null}
                             themeConfig={themeConfig}
-                            style={{
-                                backgroundColor: getBgColor('#05080c', themeConfig?.opacity?.sidebar || 0.9),
-                                backdropFilter: themeConfig?.backgroundImage ? `blur(${(themeConfig?.blur || 0) / 2}px)` : 'none'
-                            }}
+                            style={chatSidebarStyle}
                         />
                     </aside>
                 </section>
@@ -460,7 +478,7 @@ const App: React.FC = () => {
                 themeConfig={themeConfig}
                 onConfigChange={setConfig}
                 onThemeConfigChange={setThemeConfig}
-                onClose={() => setIsConfigOpen(false)}
+                onClose={handleCloseConfig}
                 triggerRef={settingsButtonRef}
             />
         </div>

@@ -87,4 +87,4 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
     );
 };
 
-export default Toolbelt;
+export default React.memo(Toolbelt);

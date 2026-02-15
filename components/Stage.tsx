@@ -214,4 +214,4 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
     );
 };
 
-export default Stage;
+export default React.memo(Stage);
