@@ -12,13 +12,14 @@ interface StageProps {
     themeConfig?: any; // Avoiding circular dependency for now, or use ThemeConfig
 }
 
-const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStream, onCanvasReady, style, themeConfig }) => {
+const Stage: React.FC<StageProps> = React.memo(({ tool, color, brushSize, onClear, videoStream, onCanvasReady, style, themeConfig }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const contextRef = useRef<CanvasRenderingContext2D | null>(null);
+    const rafIdRef = useRef<number | null>(null);
 
     // Expose canvas to parent
     useEffect(() => {
@@ -45,37 +46,43 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
                 // We observe the stage wrapper (16:9), so use its dimensions
                 const { width, height } = entry.contentRect;
 
-                // Only act if dimensions have actually changed to avoid loop/flicker
-                // Note: We update canvas resolution (width/height attributes), not style.
-                if (canvas.width !== width || canvas.height !== height) {
-
-                    // Save current content
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = canvas.width;
-                    tempCanvas.height = canvas.height;
-                    const tempCtx = tempCanvas.getContext('2d');
-                    if (tempCtx) {
-                        tempCtx.drawImage(canvas, 0, 0);
-                    }
-
-                    // Resize
-                    canvas.width = width;
-                    canvas.height = height;
-
-                    // Restore content
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
-                        ctx.drawImage(tempCanvas, 0, 0);
-
-                        // Restore context properties
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-                        ctx.strokeStyle = tool === 'eraser' ? 'rgba(0,0,0,0)' : (color || '#ffd700');
-                        ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
-                        ctx.lineWidth = brushSize || 4;
-                        contextRef.current = ctx;
-                    }
+                if (rafIdRef.current) {
+                    cancelAnimationFrame(rafIdRef.current);
                 }
+
+                rafIdRef.current = requestAnimationFrame(() => {
+                    // Only act if dimensions have actually changed to avoid loop/flicker
+                    // Note: We update canvas resolution (width/height attributes), not style.
+                    if (canvas.width !== width || canvas.height !== height) {
+
+                        // Save current content
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = canvas.width;
+                        tempCanvas.height = canvas.height;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        if (tempCtx) {
+                            tempCtx.drawImage(canvas, 0, 0);
+                        }
+
+                        // Resize
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        // Restore content
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            ctx.drawImage(tempCanvas, 0, 0);
+
+                            // Restore context properties
+                            ctx.lineCap = 'round';
+                            ctx.lineJoin = 'round';
+                            ctx.strokeStyle = tool === 'eraser' ? 'rgba(0,0,0,0)' : (color || '#ffd700');
+                            ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+                            ctx.lineWidth = brushSize || 4;
+                            contextRef.current = ctx;
+                        }
+                    }
+                });
             }
         });
 
@@ -83,6 +90,9 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
 
         return () => {
             resizeObserver.disconnect();
+            if (rafIdRef.current) {
+                cancelAnimationFrame(rafIdRef.current);
+            }
         };
     }, [tool, color, brushSize]);
 
@@ -212,6 +222,6 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
             </div>
         </section>
     );
-};
+});
 
 export default Stage;

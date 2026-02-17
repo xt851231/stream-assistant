@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { AppConfig, MediaConfig, ConnectionState, Message, ThemeConfig } from './types';
 import { DEFAULT_CONFIG, DEFAULT_MEDIA_CONFIG, INITIAL_MESSAGES, DEFAULT_THEME_CONFIG } from './constants';
 import ConfigurationMenu from './components/ConfigurationMenu';
@@ -8,6 +8,7 @@ import Toolbelt from './components/Toolbelt';
 import ChatSidebar from './components/ChatSidebar';
 import { useLiveAPI } from './hooks/useLiveAPI';
 import { Swords, Zap, Settings, Video, Mic, Monitor, MessageSquare } from 'lucide-react';
+import { getBgColor } from './lib/utils/style-utils';
 
 const App: React.FC = () => {
     // Context
@@ -136,13 +137,13 @@ const App: React.FC = () => {
         }
     };
 
-    const handleSendMessage = (text: string) => {
+    const handleSendMessage = useCallback((text: string) => {
         sendMessage(text, config);
-    };
+    }, [config, sendMessage]);
 
     // Media Handlers
     // Media Handlers
-    const handleMediaConfigChange = (newConfig: MediaConfig) => {
+    const handleMediaConfigChange = useCallback((newConfig: MediaConfig) => {
         console.log('🔧 handleMediaConfigChange:', newConfig);
         setMediaConfig(newConfig);
 
@@ -165,16 +166,16 @@ const App: React.FC = () => {
             // Note: toggleScreen will need to handle restarting if screenAudio changed while active
             toggleScreen(newConfig.screenShareEnabled, config, newConfig.screenAudio);
         }
-    };
+    }, [audioStreaming, config, mediaConfig.cameraId, mediaConfig.microphoneId, mediaConfig.screenAudio, screenSharing, toggleAudio, toggleScreen, toggleVideo, videoStreaming]);
 
     // Calculate effective config regarding active states from Context
     // This ensures the UI always reflects the REAL state, not just the local config
-    const effectiveMediaConfig: MediaConfig = {
+    const effectiveMediaConfig: MediaConfig = useMemo(() => ({
         ...mediaConfig,
         audioEnabled: audioStreaming,
         videoEnabled: videoStreaming,
         screenShareEnabled: screenSharing
-    };
+    }), [mediaConfig, audioStreaming, videoStreaming, screenSharing]);
 
     /* 
        Refactor Note: 
@@ -187,23 +188,11 @@ const App: React.FC = () => {
 
 
 
-    const triggerClearStage = () => {
+    const triggerClearStage = useCallback(() => {
         // Dispatch custom event for Stage component
         const event = new Event('STAGE_CLEAR');
         document.dispatchEvent(event);
-    };
-
-    // Helper to get helper RBGA color with opacity
-    const getBgColor = (baseColorHex: string, opacity: number) => {
-        // Simple hex to rgba conversion
-        const hex = baseColorHex.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    };
-
-
+    }, []);
 
     return (
         <div id="viewport" className="w-screen h-screen bg-[#050505] flex items-center justify-center overflow-hidden relative">

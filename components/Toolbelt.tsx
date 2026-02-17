@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pen, Eraser, Pipette, Trash2 } from 'lucide-react';
 import { ThemeConfig } from '../types';
+import { getBgColor } from '../lib/utils/style-utils';
 
 interface ToolbeltProps {
     tool: 'pen' | 'eraser';
@@ -16,16 +17,7 @@ interface ToolbeltProps {
 const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#ffd700', '#ffffff'];
 const SIZES = [2, 4, 8, 12];
 
-const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, brushSize, setBrushSize, onClear, themeConfig }) => {
-    // Helper to get helper RBGA color with opacity
-    const getBgColor = (baseColorHex: string, opacity: number) => {
-        const hex = baseColorHex.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    };
-
+const Toolbelt: React.FC<ToolbeltProps> = React.memo(({ tool, setTool, color, setColor, brushSize, setBrushSize, onClear, themeConfig }) => {
     return (
         <section
             aria-label="Toolbelt"
@@ -85,6 +77,6 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
             </div>
         </section>
     );
-};
+});
 
 export default Toolbelt;

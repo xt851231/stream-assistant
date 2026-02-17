@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { MediaConfig, ThemeConfig } from '../types';
 import { Mic, Video, Monitor, Volume2, Settings2, Gamepad2 } from 'lucide-react';
 import { SpeechAudioContext } from '../lib/utils/SpeechAudioContext';
+import { getBgColor } from '../lib/utils/style-utils';
 
 interface MediaControlHubProps {
     isOpen: boolean;
@@ -16,15 +17,7 @@ interface DeviceInfo {
     label: string;
 }
 
-const getBgColor = (baseColorHex: string, opacity: number) => {
-    const hex = baseColorHex.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-};
-
-const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onConfigChange, onClose, themeConfig }) => {
+const MediaControlHub: React.FC<MediaControlHubProps> = React.memo(({ isOpen, config, onConfigChange, onClose, themeConfig }) => {
     const [microphones, setMicrophones] = useState<DeviceInfo[]>([]);
     const [cameras, setCameras] = useState<DeviceInfo[]>([]);
     const panelRef = useRef<HTMLElement>(null);
@@ -263,6 +256,6 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
             </div>
         </aside>
     );
-};
+});
 
 export default MediaControlHub;
