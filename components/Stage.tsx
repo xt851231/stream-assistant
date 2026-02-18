@@ -40,6 +40,8 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
         const canvas = canvasRef.current;
         if (!stage || !canvas) return;
 
+        let animationFrameId: number;
+
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 // We observe the stage wrapper (16:9), so use its dimensions
@@ -48,33 +50,37 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
                 // Only act if dimensions have actually changed to avoid loop/flicker
                 // Note: We update canvas resolution (width/height attributes), not style.
                 if (canvas.width !== width || canvas.height !== height) {
+                    // Debounce/Throttle with requestAnimationFrame to prevent thrashing
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
 
-                    // Save current content
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = canvas.width;
-                    tempCanvas.height = canvas.height;
-                    const tempCtx = tempCanvas.getContext('2d');
-                    if (tempCtx) {
-                        tempCtx.drawImage(canvas, 0, 0);
-                    }
+                    animationFrameId = requestAnimationFrame(() => {
+                        // Save current content
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = canvas.width;
+                        tempCanvas.height = canvas.height;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        if (tempCtx) {
+                            tempCtx.drawImage(canvas, 0, 0);
+                        }
 
-                    // Resize
-                    canvas.width = width;
-                    canvas.height = height;
+                        // Resize
+                        canvas.width = width;
+                        canvas.height = height;
 
-                    // Restore content
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
-                        ctx.drawImage(tempCanvas, 0, 0);
+                        // Restore content
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            ctx.drawImage(tempCanvas, 0, 0);
 
-                        // Restore context properties
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-                        ctx.strokeStyle = tool === 'eraser' ? 'rgba(0,0,0,0)' : (color || '#ffd700');
-                        ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
-                        ctx.lineWidth = brushSize || 4;
-                        contextRef.current = ctx;
-                    }
+                            // Restore context properties
+                            ctx.lineCap = 'round';
+                            ctx.lineJoin = 'round';
+                            ctx.strokeStyle = tool === 'eraser' ? 'rgba(0,0,0,0)' : (color || '#ffd700');
+                            ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+                            ctx.lineWidth = brushSize || 4;
+                            contextRef.current = ctx;
+                        }
+                    });
                 }
             }
         });
@@ -83,6 +89,7 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
 
         return () => {
             resizeObserver.disconnect();
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
         };
     }, [tool, color, brushSize]);
 
@@ -214,4 +221,4 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
     );
 };
 
-export default Stage;
+export default React.memo(Stage);
