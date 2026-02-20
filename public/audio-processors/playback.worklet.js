@@ -15,17 +15,42 @@ class PCMProcessor extends AudioWorkletProcessor {
             } else {
                 const data = event.data;
                 if (data && data.length) {
-                    // Bulk copy using set() - much faster than per-sample loop
+                    const len = data.length;
                     const writePos = this.writeIndex % this.bufferSize;
                     const availableSpace = this.bufferSize - writePos;
-                    if (data.length <= availableSpace) {
-                        this.buffer.set(data, writePos);
+
+                    if (data instanceof Int16Array) {
+                        // Conversion loop: Int16 -> Float32
+                        const inv32768 = 1 / 32768;
+
+                        if (len <= availableSpace) {
+                            for (let i = 0; i < len; i++) {
+                                this.buffer[writePos + i] = data[i] * inv32768;
+                            }
+                        } else {
+                            // Handle wrap-around
+                            // Part 1: Fill to end
+                            for (let i = 0; i < availableSpace; i++) {
+                                this.buffer[writePos + i] = data[i] * inv32768;
+                            }
+                            // Part 2: Fill from start
+                            const remaining = len - availableSpace;
+                            for (let i = 0; i < remaining; i++) {
+                                this.buffer[i] = data[availableSpace + i] * inv32768;
+                            }
+                        }
                     } else {
-                        // Handle wrap-around
-                        this.buffer.set(data.subarray(0, availableSpace), writePos);
-                        this.buffer.set(data.subarray(availableSpace), 0);
+                        // Bulk copy using set() - much faster than per-sample loop
+                        // Assumes Float32Array or compatible array
+                        if (len <= availableSpace) {
+                            this.buffer.set(data, writePos);
+                        } else {
+                            // Handle wrap-around
+                            this.buffer.set(data.subarray(0, availableSpace), writePos);
+                            this.buffer.set(data.subarray(availableSpace), 0);
+                        }
                     }
-                    this.writeIndex += data.length;
+                    this.writeIndex += len;
                 }
             }
         };
