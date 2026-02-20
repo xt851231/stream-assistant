@@ -570,3 +570,42 @@ Removed the `onSpeechEnd()` method from `GeminiLiveAdapter.js`. This restores th
 **Key Changes:**
 - `lib/api/adapters/GeminiLiveAdapter.js`: Removed `onSpeechEnd()` method (lines 263-273).
 
+## [2026-02-20 16:45] High-Performance Base64 Utility & Pipeline Optimization (Jules)
+
+**The Problem:**
+- Audio processing and binary data transmission had measurable overhead due to suboptimal Base64 encoding/decoding.
+- Previous implementation used manual string concatenation and `atob`/`btoa` without chunking, which could hit stack limits for large buffers (like video frames).
+
+**Root Cause:**
+- JavaScript's `btoa` and `atob` are legacy APIs not designed for high-throughput binary data.
+- Manual bit-shifting loops for Base64 in JS are slower than native implementations (Node `Buffer` or browser `Uint8Array.toBase64`).
+
+**The Solution:**
+1. **Tiered Optimization**: Updated `uint8ArrayToBase64` to use a tiered approach:
+   - `Uint8Array.toBase64()` (Future/Proposal support).
+   - `Buffer.from().toString('base64')` (Fastest for Node.js).
+   - Chunked `btoa(String.fromCharCode.apply())` for browser compatibility, avoiding stack overflows on large buffers.
+2. **Memory Efficiency**: Switched from copying buffers to using `subarray()` views during chunking to minimize garbage collection pressure.
+
+**Key Changes:**
+- `lib/utils/base64-utils.js`: Replaced manual bit-shift loop with optimized tiered implementation.
+- `tests/base64-utils.test.js`: Verified correctness with random 1MB buffers.
+
+## [2026-02-20 16:50] Security Hardening: Removing Insecure Env Var Injection (Jules)
+
+**The Problem:**
+- The `vite.config.ts` was injecting `GEMINI_API_KEY` into the client-side bundle via `define: { 'process.env.API_KEY': ... }`.
+- This exposed the API key to anyone viewing the source code of the deployed dashboard.
+
+**Root Cause:**
+- Early development used `process.env` shims in Vite for convenience.
+- The transition to a more secure "Configuration Menu" approach rendered these hardcoded injections unnecessary and dangerous.
+
+**The Solution:**
+1. **Removed Injection**: Deleted the `define` block and `loadEnv` usage in `vite.config.ts`.
+2. **Context-Driven Config**: Ensured the application relies exclusively on the user-provided API key from the `ConfigurationMenu` (stored in `localStorage` or session state), rather than bundled environment variables.
+
+**Key Changes:**
+- `vite.config.ts`: Removed `process.env.API_KEY` and `process.env.GEMINI_API_KEY` definitions.
+- `README.md`: Updated instructions to emphasize manual key entry in the UI.
+
