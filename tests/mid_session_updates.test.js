@@ -55,7 +55,7 @@ describe('GeminiLiveAdapter Mid-Session Updates', () => {
 
 describe('Media Streamer setClient', () => {
     it('AudioStreamer should support setClient for adapter swap', async () => {
-        const { AudioStreamer } = await import('../lib/utils/media-utils.js');
+        const { AudioStreamer } = await import('../lib/utils/audio-streamer.js');
 
         const oldClient = { sendAudio: mock.fn(), connected: true };
         const newClient = { sendAudio: mock.fn(), connected: true };
@@ -68,7 +68,7 @@ describe('Media Streamer setClient', () => {
     });
 
     it('BaseVideoCapture subclass (VideoStreamer) should support setClient', async () => {
-        const { VideoStreamer } = await import('../lib/utils/media-utils.js');
+        const { VideoStreamer } = await import('../lib/utils/video-streamer.js');
 
         const oldClient = { sendImage: mock.fn(), connected: true };
         const newClient = { sendImage: mock.fn(), connected: true };

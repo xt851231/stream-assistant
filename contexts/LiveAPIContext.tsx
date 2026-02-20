@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useState, useRef, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { AppConfig, MediaConfig, Message } from '../types';
 import { ModelClient } from '../lib/api/ModelClient';
-import { AudioStreamer, VideoStreamer, ScreenCapture, AudioPlayer } from '../lib/utils/media-utils';
+import { AudioStreamer } from '../lib/utils/audio-streamer';
+import { VideoStreamer } from '../lib/utils/video-streamer';
+import { ScreenCapture } from '../lib/utils/screen-capture';
+import { AudioPlayer } from '../lib/utils/audio-player';
 import { MODEL_REGISTRY } from '../utils/model-registry';
 import { PERSONAS } from '../constants';
 import { calculateNextProactiveTime } from '../lib/utils/scheduler-utils';
