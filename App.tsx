@@ -9,6 +9,7 @@ import Toolbelt from './components/Toolbelt';
 import ChatSidebar from './components/ChatSidebar';
 import { useLiveAPI } from './hooks/useLiveAPI';
 import { Swords, Zap, Settings, Video, Mic, Monitor, MessageSquare } from 'lucide-react';
+import { getBgColor } from './lib/utils/style-utils';
 
 const App: React.FC = () => {
     // Context
@@ -240,15 +241,6 @@ const App: React.FC = () => {
         document.dispatchEvent(event);
     };
 
-    // Helper to get helper RBGA color with opacity
-    const getBgColor = (baseColorHex: string, opacity: number) => {
-        // Simple hex to rgba conversion
-        const hex = baseColorHex.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    };
 
 
 

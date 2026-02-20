@@ -2,19 +2,12 @@ import React from 'react';
 import { Message, ThemeConfig } from '../types';
 import { Crown, Bot } from 'lucide-react';
 import { PERSONAS } from '../constants';
+import { getBgColor } from '../lib/utils/style-utils';
 
 interface ChatMessageProps {
     message: Message;
     themeConfig?: ThemeConfig;
 }
-
-const getBgColor = (baseColorHex: string, opacity: number) => {
-    const hex = baseColorHex.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-};
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, themeConfig }) => {
     const msg = message;
