@@ -22,6 +22,10 @@ export const DEFAULT_CONFIG: AppConfig = {
     topP: 0.95,
     topK: 64,
     thinkingBudget: 0,
+    ttsEngine: 'gemini',
+    ttsVoice: 'Puck',
+    ttsRate: 1.0,
+    ttsPitch: 1.0,
 };
 
 export const DEFAULT_MEDIA_CONFIG: MediaConfig = {

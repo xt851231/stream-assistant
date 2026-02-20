@@ -46,6 +46,12 @@ export interface AppConfig {
     topP: number;
     topK: number;
     thinkingBudget: number;
+
+    // TTS Configuration
+    ttsEngine: 'browser' | 'gemini';
+    ttsVoice: string;
+    ttsRate: number;
+    ttsPitch: number;
 }
 
 export interface ThemeConfig {

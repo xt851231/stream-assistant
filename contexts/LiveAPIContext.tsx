@@ -51,6 +51,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const activeToolsMapRef = useRef<Record<string, any>>({});
     const latestConfigRef = useRef<AppConfig | null>(null);
     const lastUserSpeechTimeRef = useRef<number>(Date.now());
+    const isSpeakingRef = useRef<boolean>(false);
     const nextProactiveInteractionTimeRef = useRef<number>(0);
     const isModelRespondingRef = useRef<boolean>(false);
 
@@ -230,6 +231,11 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 prefixPadding: config.prefixPadding,
                 startSpeechSensitivity: config.startSpeechSensitivity === 'default' ? 'START_SENSITIVITY_UNSPECIFIED' : config.startSpeechSensitivity === 'high' ? 'START_SENSITIVITY_HIGH' : config.startSpeechSensitivity === 'medium' ? 'START_SENSITIVITY_MEDIUM' : 'START_SENSITIVITY_LOW',
                 endSpeechSensitivity: config.endSpeechSensitivity === 'default' ? 'END_SENSITIVITY_UNSPECIFIED' : config.endSpeechSensitivity === 'high' ? 'END_SENSITIVITY_HIGH' : config.endSpeechSensitivity === 'medium' ? 'END_SENSITIVITY_MEDIUM' : 'END_SENSITIVITY_LOW',
+                ttsEngine: config.ttsEngine,
+                ttsVoice: config.ttsVoice,
+                ttsRate: config.ttsRate,
+                ttsPitch: config.ttsPitch,
+                googleGrounding: config.googleGrounding,
             });
 
             clientRef.current.on('content', handleMessage);
@@ -340,6 +346,8 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
 
                 // Hook up VAD status to control video transmission
                 audioStreamerRef.current.onSpeechStatusChange = (isSpeaking: boolean) => {
+                    isSpeakingRef.current = isSpeaking;
+
                     if (isSpeaking) {
                         lastUserSpeechTimeRef.current = Date.now();
                         // Reset proactive timer when user speaks
@@ -391,6 +399,10 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 // Configure Video Transmission Strategy
                 if (videoStreamerRef.current) {
                     videoStreamerRef.current.alwaysTransmit = !config.enableVAD;
+                    if (config.enableVAD) {
+                        // Immediately sync with current VAD speaking state
+                        videoStreamerRef.current.transmitFrames = isSpeakingRef.current;
+                    }
                 }
 
                 setCameraStream(video.srcObject);
@@ -430,6 +442,10 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 // Configure Screen Transmission Strategy
                 if (screenCaptureRef.current) {
                     screenCaptureRef.current.alwaysTransmit = !config.enableVAD;
+                    if (config.enableVAD) {
+                        // Immediately sync with current VAD speaking state
+                        screenCaptureRef.current.transmitFrames = isSpeakingRef.current;
+                    }
                 }
 
                 // If Camera was already streaming, we move it to background (in UI)
@@ -501,6 +517,11 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 prefixPadding: newConfig.prefixPadding,
                 startSpeechSensitivity: newConfig.startSpeechSensitivity === 'default' ? 'START_SENSITIVITY_UNSPECIFIED' : newConfig.startSpeechSensitivity === 'high' ? 'START_SENSITIVITY_HIGH' : newConfig.startSpeechSensitivity === 'medium' ? 'START_SENSITIVITY_MEDIUM' : 'START_SENSITIVITY_LOW',
                 endSpeechSensitivity: newConfig.endSpeechSensitivity === 'default' ? 'END_SENSITIVITY_UNSPECIFIED' : newConfig.endSpeechSensitivity === 'high' ? 'END_SENSITIVITY_HIGH' : newConfig.endSpeechSensitivity === 'medium' ? 'END_SENSITIVITY_MEDIUM' : 'END_SENSITIVITY_LOW',
+                ttsEngine: newConfig.ttsEngine,
+                ttsVoice: newConfig.ttsVoice,
+                ttsRate: newConfig.ttsRate,
+                ttsPitch: newConfig.ttsPitch,
+                googleGrounding: newConfig.googleGrounding,
             });
 
             // Re-attach event handlers

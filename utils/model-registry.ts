@@ -1,7 +1,22 @@
-
 import { PERSONAS, VOICES } from '../constants';
 
 export { PERSONAS, VOICES };
+
+export function getStorageKey(modelId: string, personaId: string): string {
+    return `config_${modelId}_${personaId}`;
+}
+
+export function getEffectiveSettings(requiresTTS: boolean, settings: string[]): string[] {
+    if (!requiresTTS) return settings;
+
+    const personaIndex = settings.indexOf('persona');
+    if (personaIndex === -1) return settings;
+
+    const newSettings = [...settings];
+    // Inject TTS settings immediately after 'persona'
+    newSettings.splice(personaIndex + 1, 0, 'ttsEngine', 'ttsVoice', 'ttsRate', 'ttsPitch');
+    return newSettings;
+}
 
 export const PROVIDERS = {
     google: { id: 'google', name: 'Google Gemini', disabled: false }
@@ -35,6 +50,7 @@ export const MODEL_REGISTRY: Record<string, any> = {
         providerId: 'google',
         modelId: 'gemini-2.5-flash',
         protocol: 'rest',
+        requiresTTS: true,
         uiGroups: [
             {
                 id: 'system',
@@ -43,7 +59,7 @@ export const MODEL_REGISTRY: Record<string, any> = {
                 sections: [
                     { title: 'Connection', settings: ['apiKey', 'modelId'] },
                     { title: 'Behavior', settings: ['persona', 'systemInstructions', 'temperature'] },
-                    { title: 'Features', settings: ['affectiveDialog'] },
+                    { title: 'Features', settings: ['googleGrounding', 'affectiveDialog'] },
                     { title: 'Reasoning', settings: ['thinkingBudget', 'topP', 'topK'] },
                     { title: 'Client VAD', settings: ['enableVAD', 'silenceDuration', 'prefixPadding'] },
                 ]
@@ -67,6 +83,17 @@ export const FIELD_DEFINITIONS: Record<string, any> = {
     inputTranscription: { label: 'Input Transcription', type: 'checkbox', defaultValue: true },
     outputTranscription: { label: 'Output Transcription', type: 'checkbox', defaultValue: true },
     googleGrounding: { label: 'Google Grounding', type: 'checkbox', defaultValue: false },
+
+    // TTS
+    ttsEngine: {
+        label: 'TTS Engine', type: 'select', options: [
+            { value: 'gemini', label: 'Gemini (Native)' },
+            { value: 'browser', label: 'Browser (Web Speech)' }
+        ], defaultValue: 'gemini'
+    },
+    ttsVoice: { label: 'TTS Voice', type: 'select', options: VOICES.map(v => ({ value: v, label: v })), defaultValue: 'Puck' },
+    ttsRate: { label: 'TTS Rate', type: 'slider', min: 0.5, max: 2.0, step: 0.1, defaultValue: 1.0 },
+    ttsPitch: { label: 'TTS Pitch', type: 'slider', min: 0.5, max: 2.0, step: 0.1, defaultValue: 1.0 },
 
     // VAD
     // VAD

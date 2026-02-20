@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AppConfig, MediaConfig, ConnectionState, Message, ThemeConfig } from './types';
 import { DEFAULT_CONFIG, DEFAULT_MEDIA_CONFIG, INITIAL_MESSAGES, DEFAULT_THEME_CONFIG } from './constants';
+import { getStorageKey } from './utils/model-registry';
 import ConfigurationMenu from './components/ConfigurationMenu';
 import MediaControlHub from './components/MediaControlHub';
 import Stage from './components/Stage';
@@ -33,11 +34,26 @@ const App: React.FC = () => {
     // State
     const [config, setConfig] = useState<AppConfig>(() => {
         try {
-            const savedConfig = localStorage.getItem('app_config');
-            if (savedConfig) {
-                const parsed = JSON.parse(savedConfig);
-                return { ...DEFAULT_CONFIG, ...parsed };
+            // First find out what the last used model/persona was
+            const baseSavedConfig = localStorage.getItem('app_config');
+            let lastUsedConfig = { ...DEFAULT_CONFIG };
+
+            if (baseSavedConfig) {
+                const parsedBase = JSON.parse(baseSavedConfig);
+                lastUsedConfig = { ...lastUsedConfig, ...parsedBase };
             }
+
+            // Now try to load the specific saved state for that model + persona combo
+            const specificKey = getStorageKey(lastUsedConfig.provider, lastUsedConfig.selectedPersonaId);
+            const specificSavedConfig = localStorage.getItem(specificKey);
+
+            if (specificSavedConfig) {
+                const parsedSpecific = JSON.parse(specificSavedConfig);
+                return { ...lastUsedConfig, ...parsedSpecific };
+            }
+
+            return lastUsedConfig;
+
         } catch (e) {
             console.error("Failed to load config from localStorage", e);
         }
@@ -85,30 +101,61 @@ const App: React.FC = () => {
     }, [themeConfig]);
 
     // Update Config when relevant fields change (not on initial connection)
-    const prevConfigRef = React.useRef<{ systemInstructions?: string; voice?: string; selectedPersonaId?: string }>({});
+    const prevConfigRef = React.useRef<{
+        systemInstructions?: string;
+        voice?: string;
+        selectedPersonaId?: string;
+        ttsEngine?: string;
+        ttsVoice?: string;
+        ttsRate?: number;
+        ttsPitch?: number;
+    }>({});
+
     React.useEffect(() => {
         if (!connected) return;
 
         const prev = prevConfigRef.current;
         const changed = prev.systemInstructions !== config.systemInstructions
             || prev.voice !== config.voice
-            || prev.selectedPersonaId !== config.selectedPersonaId;
+            || prev.selectedPersonaId !== config.selectedPersonaId
+            || prev.ttsEngine !== config.ttsEngine
+            || prev.ttsVoice !== config.ttsVoice
+            || prev.ttsRate !== config.ttsRate
+            || prev.ttsPitch !== config.ttsPitch;
 
         // Only update if values actually changed (skip initial mount)
         if (changed && (prev.systemInstructions !== undefined || prev.voice !== undefined || prev.selectedPersonaId !== undefined)) {
             setLiveConfig({
                 systemInstructions: config.systemInstructions,
                 voice: config.voice,
-                selectedPersonaId: config.selectedPersonaId
+                selectedPersonaId: config.selectedPersonaId,
+                ttsEngine: config.ttsEngine,
+                ttsVoice: config.ttsVoice,
+                ttsRate: config.ttsRate,
+                ttsPitch: config.ttsPitch
             });
         }
 
         prevConfigRef.current = {
             systemInstructions: config.systemInstructions,
             voice: config.voice,
-            selectedPersonaId: config.selectedPersonaId
+            selectedPersonaId: config.selectedPersonaId,
+            ttsEngine: config.ttsEngine,
+            ttsVoice: config.ttsVoice,
+            ttsRate: config.ttsRate,
+            ttsPitch: config.ttsPitch
         };
-    }, [config.systemInstructions, config.voice, config.selectedPersonaId, connected, setLiveConfig]);
+    }, [
+        config.systemInstructions,
+        config.voice,
+        config.selectedPersonaId,
+        config.ttsEngine,
+        config.ttsVoice,
+        config.ttsRate,
+        config.ttsPitch,
+        connected,
+        setLiveConfig
+    ]);
 
     // Derived State
     const connectionState: ConnectionState = connected ? 'connected' : connecting ? 'connecting' : 'disconnected';

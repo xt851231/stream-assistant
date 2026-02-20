@@ -1,7 +1,7 @@
 import React, { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AppConfig, ThemeConfig } from '../types';
-import { MODEL_REGISTRY, PROVIDERS, FIELD_DEFINITIONS, PERSONAS, VOICES } from '../utils/model-registry';
+import { MODEL_REGISTRY, PROVIDERS, FIELD_DEFINITIONS, PERSONAS, VOICES, getEffectiveSettings, getStorageKey } from '../utils/model-registry';
 import { Cpu, Activity, Save, Image, Settings, Sparkles, Brain, Mic } from 'lucide-react';
 
 interface ConfigurationMenuProps {
@@ -21,6 +21,18 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
     const [activeTab, setActiveTab] = useState<string>(currentModel.uiGroups[0]?.id || 'system');
     const [position, setPosition] = useState({ top: 0, right: 0 });
     const panelRef = useRef<HTMLElement>(null);
+    const [browserVoices, setBrowserVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+    useEffect(() => {
+        const updateVoices = () => {
+            setBrowserVoices(window.speechSynthesis.getVoices());
+        };
+        updateVoices();
+        window.speechSynthesis.onvoiceschanged = updateVoices;
+        return () => {
+            window.speechSynthesis.onvoiceschanged = null;
+        };
+    }, []);
 
     useEffect(() => {
         if (activeTab !== 'appearance' && !currentModel.uiGroups.find((g: any) => g.id === activeTab)) {
@@ -75,7 +87,12 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
 
     const handleChange = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => {
         const newConfig = { ...config, [key]: value };
-        localStorage.setItem(`config_${currentModelId}`, JSON.stringify(newConfig));
+
+        // Critical: If the user just changed their persona, the new storage key needs to use the NEW persona ID
+        const activePersonaId = key === 'selectedPersonaId' ? value as string : newConfig.selectedPersonaId;
+        const storageKey = getStorageKey(currentModelId, activePersonaId);
+
+        localStorage.setItem(storageKey, JSON.stringify(newConfig));
         onConfigChange(newConfig);
     };
 
@@ -83,22 +100,38 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
         const persona = PERSONAS.find(p => p.id === personaId);
         if (!persona) return;
 
-        const newConfig = {
-            ...config,
-            selectedPersonaId: persona.id,
-            systemInstructions: persona.systemInstruction,
-            voice: persona.voice
-        };
-        localStorage.setItem(`config_${currentModelId}`, JSON.stringify(newConfig));
-        onConfigChange(newConfig);
+        let nextConfig: AppConfig;
+        const storageKey = getStorageKey(currentModelId, persona.id);
+        const saved = localStorage.getItem(storageKey);
+
+        if (saved) {
+            // Load their whole saved preferences for this specific persona
+            nextConfig = JSON.parse(saved);
+        } else {
+            // Unseen persona for this model, create defaults
+            nextConfig = {
+                ...config,
+                selectedPersonaId: persona.id,
+                systemInstructions: persona.systemInstruction,
+                voice: persona.voice,
+                ttsVoice: persona.voice // Bind custom TTS voice to persona by default
+            };
+        }
+
+        localStorage.setItem(storageKey, JSON.stringify(nextConfig));
+        onConfigChange(nextConfig);
     };
 
     const handleModelChange = (newModelKey: string) => {
         if (newModelKey === currentModelId) return;
 
-        localStorage.setItem(`config_${currentModelId}`, JSON.stringify(config));
+        // Save current state before leaving
+        const currentStorageKey = getStorageKey(currentModelId, config.selectedPersonaId);
+        localStorage.setItem(currentStorageKey, JSON.stringify(config));
 
-        const saved = localStorage.getItem(`config_${newModelKey}`);
+        // Load targeted model with current persona (or default if persona never used on new model)
+        const nextStorageKey = getStorageKey(newModelKey, config.selectedPersonaId);
+        const saved = localStorage.getItem(nextStorageKey);
         let nextConfig: AppConfig;
 
         const newModelDef = MODEL_REGISTRY[newModelKey];
@@ -111,14 +144,16 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
             newModelDef.uiGroups.forEach((group: any) => {
                 if (group.sections) {
                     group.sections.forEach((section: any) => {
-                        section.settings.forEach((settingId: string) => {
+                        const effectiveSettings = getEffectiveSettings(newModelDef.requiresTTS ?? false, section.settings);
+                        effectiveSettings.forEach((settingId: string) => {
                             if (settingId !== 'persona' && FIELD_DEFINITIONS[settingId]) {
                                 defaults[settingId] = FIELD_DEFINITIONS[settingId].defaultValue;
                             }
                         });
                     });
                 } else if (group.settings) {
-                    group.settings.forEach((settingId: string) => {
+                    const effectiveSettings = getEffectiveSettings(newModelDef.requiresTTS ?? false, group.settings);
+                    effectiveSettings.forEach((settingId: string) => {
                         if (settingId !== 'persona' && FIELD_DEFINITIONS[settingId]) {
                             defaults[settingId] = FIELD_DEFINITIONS[settingId].defaultValue;
                         }
@@ -204,7 +239,11 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                             value={String(config[settingId as keyof AppConfig] || '')}
                             onChange={(e) => handleChange(settingId as keyof AppConfig, e.target.value)}
                         >
-                            {field.options?.map((opt: any) => (
+                            {settingId === 'ttsVoice' && config.ttsEngine === 'browser' ? (
+                                browserVoices.map((v) => (
+                                    <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>
+                                ))
+                            ) : field.options?.map((opt: any) => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                         </select>
@@ -331,16 +370,20 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                             if (!group) return null;
 
                             if (group.sections) {
-                                return group.sections.map((section: any, idx: number) => (
-                                    <section key={idx} className="space-y-3">
-                                        <h3 className="text-[#ffd700] font-pixel text-[10px] uppercase mb-2 border-b border-gray-700 pb-1">
-                                            {section.title}
-                                        </h3>
-                                        {renderSettingsList(section.settings)}
-                                    </section>
-                                ));
+                                return group.sections.map((section: any, idx: number) => {
+                                    const effectiveSettings = getEffectiveSettings(currentModel.requiresTTS ?? false, section.settings);
+                                    return (
+                                        <section key={idx} className="space-y-3">
+                                            <h3 className="text-[#ffd700] font-pixel text-[10px] uppercase mb-2 border-b border-gray-700 pb-1">
+                                                {section.title}
+                                            </h3>
+                                            {renderSettingsList(effectiveSettings)}
+                                        </section>
+                                    );
+                                });
                             } else if (group.settings) {
-                                return renderSettingsList(group.settings);
+                                const effectiveSettings = getEffectiveSettings(currentModel.requiresTTS ?? false, group.settings);
+                                return renderSettingsList(effectiveSettings);
                             }
                             return null;
                         })()}

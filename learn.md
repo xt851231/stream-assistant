@@ -1,5 +1,32 @@
 # Learnings
 
+## [2026-02-20 14:15] TTS Configuration for Non-Live (REST) Models
+
+**The Problem:**
+- Non-live API models (like Gemini Flash 2.5 REST) lacked audio output customization.
+- While these models can use TTS (Text-to-Speech) for responses, there was no UI to configure the TTS engine, voice, rate, or pitch.
+- Browser-based TTS voices were not discoverable or selectable in the configuration menu.
+
+**Root Cause:**
+- The `AppConfig` and Model Registry only supported native voices for the Live API.
+- `ConfigurationMenu` was not designed to dynamically fetch and display system-level resources like browser synthesis voices.
+- TTS Adapters were instantiated with hardcoded defaults instead of taking advantage of the full user configuration.
+
+**The Solution:**
+1. **Dynamic Registry Update**: Enhanced the `MODEL_REGISTRY` for REST models to include a dedicated "TTS Configuration" section.
+2. **State & Types Extension**: Added `ttsEngine`, `ttsVoice`, `ttsRate`, and `ttsPitch` to `AppConfig`.
+3. **Browser Voice Integration**: Implemented a `useEffect` hook in `ConfigurationMenu.tsx` to enumerate `window.speechSynthesis` voices and provide them as options when the "Browser" engine is selected.
+4. **Adapter Re-initialization**: Updated `GeminiFlashAdapter.updateConfig` to detect TTS configuration changes and hot-swap the TTS adapter mid-session.
+5. **Enhanced TTS Adapters**: Updated `BrowserTTSAdapter` to apply `rate`, `pitch`, and `voice` configuration to `SpeechSynthesisUtterance` instances.
+
+**Key Changes:**
+- `types.ts` & `constants.ts`: Added new TTS configuration fields and defaults.
+- `utils/model-registry.ts`: Defined TTS UI fields and added them to REST models.
+- `components/ConfigurationMenu.tsx`: Added dynamic browser voice discovery and context-aware voice selection.
+- `lib/api/adapters/GeminiFlashAdapter.js`: Implemented smart re-initialization of TTS on config change.
+- `lib/api/tts/adapters/BrowserTTSAdapter.js`: Added support for rate, pitch, and configurable voice.
+- `lib/api/tts/adapters/GeminiTTSAdapter.js`: Updated to respect user-selected voice.
+
 ## [2026-02-16 00:15] Isolated Screen Audio and Project Knowledge Codification
 
 **The Problem:**
@@ -463,5 +490,83 @@ Added `screenSharing` to the `contextValue` object in the `useMemo` call (line ~
 **Key Changes:**
 - `lib/utils/base64-utils.js`: New high-performance binary utility.
 - `lib/utils/media-utils.js`: Integrated `base64ToUint8Array` and multiplication-based PCM conversion.
-- `components/Stage.tsx`: Adjusted `ResizeObserver` target to the 16:9 inner wrapper.
 - `tests/base64-utils.test.js`: Added comprehensive unit tests for binary utilities.
+
+## [2026-02-20 14:15] Dynamic TTS Configuration Injection
+
+**The Problem:**
+- While the previous implementation allowed TTS Configuration for Non-Live (REST) Models, the UI settings were statically positioned under their own section.
+- The user wanted these settings placed intimately connected to the "Persona" selection, and for it to generically apply to any future model (e.g. Ten Framework models) that requires an external TTS engine to emulate voice conversational flows.
+
+**Root Cause:**
+- The configuration structure in `model-registry.ts` hardcoded a 'TTS Configuration' section specifically for the `gemini-flash-rest` model.
+- There was no programmatic way to insert fields based on the presence of another field (like `persona`) across arbitrary models.
+
+**The Solution:**
+1. **Model Registry Flag**: Introduced a `requiresTTS` boolean flag to the model definitions in `MODEL_REGISTRY` (set to `true` for REST models).
+2. **Dynamic Injection Function**: Created `getEffectiveSettings(requiresTTS, settings)`, a helper function that intercepts the UI rendering pipeline. If a model `requiresTTS: true` and the section contains the `persona` field, it explicitly splices `ttsEngine`, `ttsVoice`, `ttsRate`, and `ttsPitch` directly beneath it.
+3. **UI Pipeline Integration**: Modified `ConfigurationMenu.tsx` to wrap UI generation with `getEffectiveSettings`. Not only during render, but also during the `handleModelChange` cycle to ensure `ttsEngine` default values are extracted correctly when switching modes.
+
+**Key Changes:**
+- `utils/model-registry.ts`: Added `requiresTTS` flag and `getEffectiveSettings` helper. Removed static TTS block from `gemini-flash-rest`.
+- `components/ConfigurationMenu.tsx`: Wired `getEffectiveSettings` into default generation and array rendering.
+- `tests/tts_config.test.js`: Added NodeJS native test runner verifying the pure-function splicing logic.
+- `contexts/LiveAPIContext.tsx`: ensure the 4 `tts*` fields are passed to `ModelClient.createAdapter` on initial connect and reconnect.
+
+## [2026-02-20 15:00] Google Grounding Support in Gemini Flash REST
+
+**The Problem:**
+- The application provided a toggle for "Google Grounding", but it was only available in the UI group for the Gemini Live (WebSocket) model.
+- The Gemini 2.5 Flash API (REST) inherently supports Google Search grounding, but this capability was not exposed to the user or implemented in the `GeminiFlashAdapter`.
+
+**Root Cause:**
+- `googleGrounding` was omitted from the `Features` section of the `gemini-flash-rest` model definition in the UI registry.
+- `GeminiFlashAdapter.js` did not look for this configuration flag or inject the `googleSearch` tool array into the `generateContentStream` API calls.
+
+**The Solution:**
+1. **Model Registry Addition**: Added `googleGrounding` to the explicit `uiGroups` settings list for the `gemini-flash-rest` model. Unlike TTS which uses dynamic injection, this uses standard declarative configuration since it's an independent toggle.
+2. **Context Passing**: Updated `ModelClient.createAdapter` invocations in `LiveAPIContext.tsx` to properly extract and forward `googleGrounding` from the `AppConfig` to the model adapter.
+3. **Adapter Implementation**: Modified `GeminiFlashAdapter.js` to conditionally inject `tools: [{ googleSearch: {} }]` into the `generateContentStream` request payload if the user has grounding enabled.
+
+**Key Changes:**
+- `utils/model-registry.ts`: Added `googleGrounding` to `gemini-flash-rest`.
+- `contexts/LiveAPIContext.tsx`: Passed `googleGrounding` down to the adapter.
+- `lib/api/adapters/GeminiFlashAdapter.js`: Injected the SDK `googleSearch` tool config into the API requests.
+
+## [2026-02-20 16:05] Decoupling Video Transmission from Client-Side VAD
+
+**The Problem:**
+- The user reported that enabling Client-Side VAD prevented the model from seeing video frames on the main screen, even when they started talking. 
+- The intended behavior was to only transmit frames during active speech to save tokens, but if the camera was turned on *after* the microphone, it would permanently freeze.
+
+**Root Cause:**
+- The `LiveAPIContext.tsx` logic coupled video and screen-share frame transmission to the Voice Activity Detection state via a callback on the `AudioStreamer` (`onSpeechStatusChange`).
+- This callback was *only* instantiated when `toggleAudio` was called and captured old closure references. 
+- If a user enabled a Camera *after* the Microphone, or toggled them independently, the `videoStreamer` would initialize with `transmitFrames = false` and the audio callback would fail to find the new streamer reference to unfreeze it, resulting in the API never receiving a frame.
+
+**The Solution:**
+1. **Context-Level State Sync**: Introduced `isSpeakingRef` at the context level to serve as a single source of truth for the user's current VAD state.
+2. **Robust Event Handlers**: Updated `toggleAudio` to write to `isSpeakingRef`, and then apply the updated state to any currently active `videoStreamerRef` or `screenCaptureRef`.
+3. **Initialization Sync**: Updated `toggleVideo` and `toggleScreen` to read from `isSpeakingRef` during initialization hookup, ensuring that if they are turned on *while* the user is speaking, they immediately begin transmitting instead of waiting for a new speech boundary.
+
+**Key Changes:**
+- `contexts/LiveAPIContext.tsx`: Added `isSpeakingRef` and updated `toggleAudio`, `toggleVideo`, and `toggleScreen` for correct cross-stream synchronization.
+
+## [2026-02-20 16:35] WebSocket Close 1007 — sendClientContent Conflicts with Server VAD
+
+**The Problem:**
+- After enabling the mic and speaking, the Gemini Live API WebSocket closed with code **1007** and reason `"Request contains an invalid argument."`.
+- The error occurred immediately after an `inputTranscription` was received from the server.
+
+**Root Cause:**
+- The newly added `onSpeechEnd()` method in `GeminiLiveAdapter.js` sent `sendClientContent({ turnComplete: true })` when client-side VAD detected speech had ended.
+- However, server-side automatic activity detection was **enabled** (`disabled: false`). The server already manages turn detection via its own VAD.
+- Sending a manual `turnComplete` via `sendClientContent` while `sendRealtimeInput` audio is being streamed creates a **protocol conflict** — the API rejects it and closes the socket.
+- Previously (before `onSpeechEnd()` existed), `media-utils.js` fell through to sending 20 silence audio chunks, which let server VAD naturally detect the turn end.
+
+**The Solution:**
+Removed the `onSpeechEnd()` method from `GeminiLiveAdapter.js`. This restores the silence-chunk fallback path in `media-utils.js`, which is compatible with server-side VAD.
+
+**Key Changes:**
+- `lib/api/adapters/GeminiLiveAdapter.js`: Removed `onSpeechEnd()` method (lines 263-273).
+
