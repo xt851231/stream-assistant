@@ -1,7 +1,7 @@
 
 import { test, describe, it } from 'node:test';
 import assert from 'node:assert';
-import { base64ToUint8Array, uint8ArrayToBase64 } from '../lib/utils/base64-utils.js';
+import { base64ToUint8Array, uint8ArrayToBase64, writeBase64ToUint8Array } from '../lib/utils/base64-utils.js';
 
 describe('Base64 Utils', () => {
     it('should encode and decode empty string', () => {
@@ -50,5 +50,28 @@ describe('Base64 Utils', () => {
 
         const decoded = base64ToUint8Array(encoded);
         assert.deepStrictEqual(decoded, input);
+    });
+
+    it('should write base64 to target array at offset', () => {
+        const text = "Hello";
+        const base64 = Buffer.from(text).toString('base64'); // "SGVsbG8="
+        const expected = new Uint8Array(Buffer.from(text));
+
+        const target = new Uint8Array(10);
+        // Fill with dummy data
+        target.fill(0xFF);
+
+        const offset = 2;
+        const written = writeBase64ToUint8Array(base64, target, offset);
+
+        assert.strictEqual(written, 5);
+
+        // Check content
+        assert.strictEqual(target[0], 0xFF);
+        assert.strictEqual(target[1], 0xFF);
+        for(let i=0; i<5; i++) {
+            assert.strictEqual(target[offset+i], expected[i]);
+        }
+        assert.strictEqual(target[offset+5], 0xFF);
     });
 });
