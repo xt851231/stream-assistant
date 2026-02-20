@@ -1,5 +1,107 @@
 # Learnings
 
+## [2026-02-21 01:30] Fixed Live API Audio Playback Glitches & Queue Interruptions
+
+**The Problem:**
+- Audio playback sometimes broke, glitched, or jumped backward to previous sentences, even after the chunk ordering fix.
+
+**Root Cause:**
+- **Ring Buffer Overflow:** The `playback.worklet.js` used a bounded 5-second ring buffer. If chunks arrived faster than real-time playback (e.g., during long AI monologues), `writeIndex` could lap `readIndex`, overwriting unplayed audio and causing backward skips.
+- **Precision Loss:** Continuously increasing JS numbers for `writeIndex` and `readIndex` over very long sessions could eventually hit precision limits.
+- **Stale Queue:** When the AI was interrupted (user spoke), the Live API emitted an `interrupted` event and the worklet buffer was cleared, but the `_playQueue` promise chain in `AudioPlayer` kept processing previously queued chunks, playing old audio.
+
+**The Solution:**
+- In `playback.worklet.js`, added bounds checking: if `writeIndex` laps `readIndex`, the buffer drops the oldest unplayed data by fast-forwarding `readIndex`.
+- Added periodic index wrapping (subtracting exact buffer multiples) to prevent precision loss.
+- In `media-utils.js`, updated `AudioPlayer.interrupt()` to actively clear the `_playQueue` by resetting it to `Promise.resolve()`, instantly aborting pending chunks.
+
+**Key Changes:**
+- `public/audio-processors/playback.worklet.js`: Fixed ring buffer boundaries and index wrapping strategies.
+- `lib/utils/media-utils.js`: Upgraded `interrupt()` to reset the promise queue.
+## [2026-02-21 01:24] Fixed Live API Audio Chunk Playback Ordering
+
+**The Problem:**
+- In Live API mode, audio playback was out of order — sentences didn't align with the on-screen text transcription.
+
+**Root Cause:**
+- `AudioPlayer.play()` was `async` and contained `await SpeechAudioContext.resume()`.
+- When multiple WebSocket audio chunks arrived rapidly, each triggered a separate `play()` call. The `await` yielded execution, allowing later chunks to resolve first and post to the AudioWorklet **before** earlier chunks.
+- The ring buffer in the worklet faithfully plays in write order, so misordered `postMessage` calls = misordered audio.
+
+**The Solution:**
+- Made `play()` synchronous (non-async) and queue each chunk through a `_playQueue` promise chain.
+- Each chunk's async processing (`_playChunk`) is serialized: chunk B can't post until chunk A finishes posting.
+
+**Key Changes:**
+- `lib/utils/media-utils.js`: Split `play()` into synchronous `play()` (queuer) and async `_playChunk()` (processor). Added `_playQueue` promise chain to `AudioPlayer` constructor.
+## [2026-02-21 01:10] Fixed Stale VideoStreamer Client Reference After Reconnect
+
+**The Problem:**
+- After switching between Live API and REST modes (or disconnecting and reconnecting), the camera would stream locally but the model could not see the video frames.
+
+**Root Cause:**
+- `cleanupMedia()` called `.stop()` on all streamers but never nulled out the refs (`videoStreamerRef`, `screenCaptureRef`, `audioStreamerRef`).
+- On reconnect, `connect()` created a new adapter (`clientRef.current`), but `toggleVideo` checked `if (!videoStreamerRef.current)` — the old stopped streamer was non-null, so no new one was created.
+- The old streamer's `this.client` still pointed to the **previous session's adapter**. For REST mode, `setLatestImage()` was called on the dead old adapter instead of the new `GeminiFlashAdapter`, leaving `latestImage = null`.
+
+**The Solution:**
+1. Null out all streamer refs in `cleanupMedia()` so fresh instances are always created on reconnect.
+2. Added `setClient(clientRef.current)` safety nets in `toggleVideo` and `toggleScreen` for cases where a streamer survives between sessions.
+
+**Key Changes:**
+- `contexts/LiveAPIContext.tsx`: Added ref nulling in `cleanupMedia()`, added `setClient()` calls in `toggleVideo` and `toggleScreen`.
+## [2026-02-21 00:43] Fixed Background Video Frame Transmission
+
+**The Problem:**
+- When both a webcam and a screen share were active simultaneously, the AI was receiving video frames from both sources, or prioritizing the camera even if it was relegated to the small Picture-in-Picture (PiP) view.
+- The intention was for the LLM to only "see" what is currently being broadcasted on the main Stage area.
+
+**Root Cause:**
+- `VideoStreamer` and `ScreenCapture` both extended `BaseVideoCapture` and ran independent capture intervals.
+- In `LiveAPIContext.tsx`, when `toggleScreen` was activated, the `VideoStreamer` was left running in the background (to maintain the PiP UI), but its `transmitFrames` and `alwaysTransmit` flags were never toggled off.
+- This meant that during active speech (VAD enabled) or continuously (VAD disabled), both streamers were fighting to send `sendImage` payloads to the Gemini API, causing context confusion.
+
+**The Solution:**
+- Updated the `LiveAPIContext.tsx` media toggles to enforce mutual exclusivity for frame transmission while allowing both streams to remain open for the UI.
+- In `toggleAudio` (VAD handler), `videoStreamerRef.current.transmitFrames` now explicitly checks `!screenSharing` before allowing camera frames to send.
+- In `toggleScreen(true)`, existing camera transmission is disabled (`alwaysTransmit = false`, `transmitFrames = false`).
+- In `toggleScreen(false)`, camera transmission is restored based on current VAD settings and speech state.
+- In `toggleVideo`, camera is only allowed to transmit if `!screenSharing`.
+
+**Key Changes:**
+- `contexts/LiveAPIContext.tsx`: Strengthened state machine logic in `toggleAudio`, `toggleVideo`, and `toggleScreen` to ensure only the main `videoStream` source sends image data to the adapters.
+## [2026-02-21 00:40] Fixed Video Frame Transmission in Gemini Flash REST Mode
+
+**The Problem:**
+- When using the Gemini Flash (REST) model, the AI could not "see" the video frames (e.g., from a webcam or screen share). It responded as a text-only AI when asked about visual elements.
+- The live API mode worked perfectly fine.
+
+**Root Cause:**
+- `GeminiFlashAdapter.js` had a stubbed `sendImage` method that simply logged a warning: `"GeminiFlashAdapter: sendImage received but ignored in real-time mode..."`.
+- Since REST APIs don't hold a continuous real-time streaming connection for images, the incoming frames from the `VideoStreamer` were being discarded instead of saved.
+- `GeminiFlashAdapter` had a `latestImage` property and a `setLatestImage` method, but they weren't wired to the `sendImage` adapter interface method.
+
+**The Solution:**
+- Updated the `sendImage` method in `GeminiFlashAdapter.js` to call `this.setLatestImage(base64Image)`. This accumulates the most recent frame.
+- Updated `sendText` to fall back to `this.latestImage` if no explicit image is provided in the call.
+- Now, when the user speaks (triggering `onSpeechEnd` and `sendAudioToFlash`) or types (triggering `sendText`), the accumulated `latestImage` is included in the REST API payload context, enabling multimodal vision.
+
+**Key Changes:**
+- `lib/api/adapters/GeminiFlashAdapter.js`: Rewired `sendImage` to store the frame, and made sure multimodal attachments use `latestImage` when appropriate.
+## [2026-02-21 00:33] Fixed TTS base64ToUint8Array ReferenceError
+
+**The Problem:**
+- The model responded via Gemini Flash REST, but the audio output failed to play.
+- An error was thrown: `ReferenceError: base64ToUint8Array is not defined at GeminiTTSAdapter.playAudio`.
+
+**Root Cause:**
+- The `GeminiTTSAdapter.js` was using `base64ToUint8Array` to decode incoming PCM audio from base64, but the utility function was never imported into the file. The function had been moved to `base64-utils.js` during recent pipeline optimizations.
+
+**The Solution:**
+- Imported `base64ToUint8Array` from `../../../utils/base64-utils.js` at the top of `GeminiTTSAdapter.js`.
+
+**Key Changes:**
+- `lib/api/tts/adapters/GeminiTTSAdapter.js`: Added import statement for `base64ToUint8Array`.
 ## [2026-02-20 14:15] TTS Configuration for Non-Live (REST) Models
 
 **The Problem:**

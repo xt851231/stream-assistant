@@ -2,8 +2,8 @@ class PCMProcessor extends AudioWorkletProcessor {
     constructor() {
         super();
         // Ring Buffer (Float32)
-        // 48000 * 5 = 5 seconds buffer
-        this.bufferSize = 48000 * 5;
+        // 24000 Hz * 60 seconds = 1,440,000 samples (~5.7MB)
+        this.bufferSize = 24000 * 60;
         this.buffer = new Float32Array(this.bufferSize);
         this.writeIndex = 0;
         this.readIndex = 0;
@@ -16,6 +16,13 @@ class PCMProcessor extends AudioWorkletProcessor {
                 const data = event.data;
                 if (data && data.length) {
                     const len = data.length;
+
+                    // Prevent writeIndex from lapping readIndex + bufferSize (overflow)
+                    if (this.writeIndex + len > this.readIndex + this.bufferSize) {
+                        // Fast-forward readIndex to drop oldest unplayed data
+                        this.readIndex = (this.writeIndex + len) - this.bufferSize;
+                    }
+
                     const writePos = this.writeIndex % this.bufferSize;
                     const availableSpace = this.bufferSize - writePos;
 
@@ -72,6 +79,9 @@ class PCMProcessor extends AudioWorkletProcessor {
                 channel[i] = 0;
             }
         }
+
+        // JS Numbers are fine up to 9 quadrillion. At 48kHz, that's 6,000 years of audio.
+        // No need to manually wrap indices, which causes data races.
 
         // Copy to other channels
         for (let i = 1; i < output.length; i++) {

@@ -296,6 +296,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (audioStreamerRef.current) await audioStreamerRef.current.stop();
         if (videoStreamerRef.current) await videoStreamerRef.current.stop();
         if (screenCaptureRef.current) await screenCaptureRef.current.stop();
+        audioStreamerRef.current = null;
+        videoStreamerRef.current = null;
+        screenCaptureRef.current = null;
         setAudioStreaming(false);
         setVideoStreaming(false);
         setScreenSharing(false);
@@ -306,6 +309,8 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const disconnect = async () => {
         if (clientRef.current) clientRef.current.disconnect();
         await cleanupMedia();
+        // Clear canvas drawings
+        document.dispatchEvent(new Event('STAGE_CLEAR'));
         setConnected(false);
         setConnecting(false);
     };
@@ -356,10 +361,12 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
 
                     if (config.enableVAD) {
                         if (videoStreamerRef.current) {
-                            videoStreamerRef.current.transmitFrames = isSpeaking;
+                            // Only transmit camera frames if it's the main view (screenSharing is false)
+                            videoStreamerRef.current.transmitFrames = isSpeaking && !screenSharing;
                         }
                         if (screenCaptureRef.current) {
-                            screenCaptureRef.current.transmitFrames = isSpeaking;
+                            // Only transmit screen frames if screen sharing is active
+                            screenCaptureRef.current.transmitFrames = isSpeaking && screenSharing;
                         }
                     }
                 };
@@ -385,6 +392,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (enabled) {
             if (!videoStreamerRef.current && clientRef.current) {
                 videoStreamerRef.current = new VideoStreamer(clientRef.current);
+            } else if (videoStreamerRef.current && clientRef.current) {
+                // Ensure client reference is current (may have changed after reconnect)
+                videoStreamerRef.current.setClient(clientRef.current);
             }
             if (videoStreamerRef.current) {
                 const video = await videoStreamerRef.current.start({
@@ -398,10 +408,11 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
 
                 // Configure Video Transmission Strategy
                 if (videoStreamerRef.current) {
-                    videoStreamerRef.current.alwaysTransmit = !config.enableVAD;
+                    // Only always-transmit if VAD disabled AND it's the main view
+                    videoStreamerRef.current.alwaysTransmit = !config.enableVAD && !screenSharing;
                     if (config.enableVAD) {
                         // Immediately sync with current VAD speaking state
-                        videoStreamerRef.current.transmitFrames = isSpeakingRef.current;
+                        videoStreamerRef.current.transmitFrames = isSpeakingRef.current && !screenSharing;
                     }
                 }
 
@@ -427,6 +438,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (enabled) {
             if (!screenCaptureRef.current && clientRef.current) {
                 screenCaptureRef.current = new ScreenCapture(clientRef.current);
+            } else if (screenCaptureRef.current && clientRef.current) {
+                // Ensure client reference is current (may have changed after reconnect)
+                screenCaptureRef.current.setClient(clientRef.current);
             }
             if (screenCaptureRef.current) {
                 const video = await screenCaptureRef.current.start({
@@ -441,11 +455,18 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
 
                 // Configure Screen Transmission Strategy
                 if (screenCaptureRef.current) {
+                    // Screen takes priority if active
                     screenCaptureRef.current.alwaysTransmit = !config.enableVAD;
                     if (config.enableVAD) {
                         // Immediately sync with current VAD speaking state
                         screenCaptureRef.current.transmitFrames = isSpeakingRef.current;
                     }
+                }
+
+                // Turn OFF camera transmission since screen is now active
+                if (videoStreamerRef.current) {
+                    videoStreamerRef.current.alwaysTransmit = false;
+                    videoStreamerRef.current.transmitFrames = false;
                 }
 
                 // If Camera was already streaming, we move it to background (in UI)
@@ -458,6 +479,10 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
 
             // Revert to camera if active
             if (videoStreaming && videoStreamerRef.current) {
+                // Restore camera transmission
+                videoStreamerRef.current.alwaysTransmit = !config.enableVAD;
+                videoStreamerRef.current.transmitFrames = config.enableVAD ? isSpeakingRef.current : false;
+
                 // Check if the video streamer still has an active stream
                 const cameraVideo = videoStreamerRef.current.getVideoElement();
                 if (cameraVideo && cameraVideo.srcObject) {
