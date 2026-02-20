@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Message, ThemeConfig } from '../types';
 import { X, Send, Crown, Bot } from 'lucide-react';
 import ChatMessage from './ChatMessage';
+import { getBgColor } from '../lib/utils/style-utils';
 
 interface ChatSidebarProps {
     messages: Message[];
@@ -11,14 +12,6 @@ interface ChatSidebarProps {
     style?: React.CSSProperties;
     themeConfig?: ThemeConfig;
 }
-
-const getBgColor = (baseColorHex: string, opacity: number) => {
-    const hex = baseColorHex.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-};
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({ messages, onSendMessage, onClose, videoStream, style, themeConfig }) => {
     const [input, setInput] = useState('');

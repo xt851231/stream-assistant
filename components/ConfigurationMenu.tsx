@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { AppConfig, ThemeConfig } from '../types';
 import { MODEL_REGISTRY, PROVIDERS, FIELD_DEFINITIONS, PERSONAS, VOICES } from '../utils/model-registry';
 import { Cpu, Activity, Save, Image, Settings, Sparkles, Brain, Mic } from 'lucide-react';
+import { getBgColor } from '../lib/utils/style-utils';
 
 interface ConfigurationMenuProps {
     isOpen: boolean;
@@ -136,14 +137,6 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
 
         nextConfig.provider = newModelKey;
         onConfigChange(nextConfig);
-    };
-
-    const getBgColor = (baseColorHex: string, opacity: number) => {
-        const hex = baseColorHex.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
     };
 
     const renderIcon = (iconName: string, size: number = 14) => {
