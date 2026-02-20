@@ -442,3 +442,26 @@ Added `screenSharing` to the `contextValue` object in the `useMemo` call (line ~
 - `components/MediaControlHub.tsx`: Replaced dummy options with `enumerateDevices()`, added `devicechange` listener, added click-outside ref + handler.
 - `components/ConfigurationMenu.tsx`: Added `panelRef`, click-outside handler (also excludes the trigger button from closing).
 
+
+## [2026-02-20 13:20] Performance Pipeline Optimization and Canvas Coordinate Sync
+
+**The Problem:**
+- Audio playback had high overhead due to inefficient base64-to-Uint8Array conversion and repeated division in PCM conversion loops.
+- Drawing on the right side of the Stage was misaligned because the `ResizeObserver` tracked the outer flex container instead of the 16:9 stage wrapper.
+- High-frequency canvas updates sometimes lagged during intense streaming sessions.
+
+**Root Cause:**
+- Standard `atob` with string iteration is highly inefficient for large binary audio buffers.
+- Canvas internal resolution was being set to the full window width, while the visual canvas was constrained by `aspect-video`, creating a coordinate mismatch.
+
+**The Solution:**
+1. **Low-Level Base64 Utility**: Implemented a lookup-table based `base64ToUint8Array` in `lib/utils/base64-utils.js`, skipping slow string manipulations.
+2. **Loop Optimization**: Optimized `AudioPlayer.play()` to use a pre-calculated reciprocal constant (`1 / 32768`) for Float32 conversion, replacing division with faster multiplication.
+3. **Stage Wrapper Sync**: Refactored `Stage.tsx` to ensure `ResizeObserver` monitors the specific `div.aspect-video` wrapper. This guarantees the canvas internal pixel grid always maps exactly 1:1 to the visual display.
+4. **Validation**: Added `tests/base64-utils.test.js` to ensure the new binary utilities handle edge cases and padding correctly.
+
+**Key Changes:**
+- `lib/utils/base64-utils.js`: New high-performance binary utility.
+- `lib/utils/media-utils.js`: Integrated `base64ToUint8Array` and multiplication-based PCM conversion.
+- `components/Stage.tsx`: Adjusted `ResizeObserver` target to the 16:9 inner wrapper.
+- `tests/base64-utils.test.js`: Added comprehensive unit tests for binary utilities.
