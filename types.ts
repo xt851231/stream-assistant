@@ -2,13 +2,19 @@ export type Provider = string; // Support dynamic providers from registry
 export type VadSensitivity = 'high' | 'medium' | 'low' | 'default';
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected';
 
+export interface PersonaVoiceConfig {
+    voice?: string;        // native voice name (websocket models)
+    ttsEngine?: string;    // TTS engine (REST models)
+    ttsVoice?: string;     // TTS voice (REST models)
+}
+
 export interface Persona {
     id: string;
     name: string;
     emoji: string;
     description: string;
     systemInstruction: string;
-    voice: string;
+    voiceDefaults: Record<string, PersonaVoiceConfig>; // keyed by provider ID
 }
 
 export interface AppConfig {

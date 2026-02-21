@@ -1,7 +1,8 @@
 import React, { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AppConfig, ThemeConfig } from '../types';
-import { MODEL_REGISTRY, PROVIDERS, FIELD_DEFINITIONS, PERSONAS, VOICES, getEffectiveSettings, getStorageKey, saveConfig, loadConfig } from '../utils/model-registry';
+import { MODEL_REGISTRY, PROVIDERS, FIELD_DEFINITIONS, PERSONAS, VOICES, getEffectiveSettings, saveModelConfig, loadModelConfig } from '../utils/model-registry';
+import { getPersonaVoiceForModel } from '../constants';
 import { Cpu, Activity, Save, Image, Settings, Sparkles, Brain, Mic } from 'lucide-react';
 import { getBgColor } from '../lib/utils/style-utils';
 
@@ -88,14 +89,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
 
     const handleChange = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => {
         const newConfig = { ...config, [key]: value };
-
-        // If persona changed, update the key for model-specific storage
-        if (key === 'selectedPersonaId') {
-            newConfig.selectedPersonaId = value as string;
-        }
-
-        // Save using split storage (common + model-specific)
-        saveConfig(newConfig);
+        // App.tsx useEffect will save via saveModelConfig
         onConfigChange(newConfig);
     };
 
@@ -103,60 +97,42 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
         const persona = PERSONAS.find(p => p.id === personaId);
         if (!persona) return;
 
-        // Save current config before switching persona
-        saveConfig(config);
+        // Get voice defaults for this persona on the current model
+        const voiceConfig = getPersonaVoiceForModel(persona, currentModelId);
 
-        // Try to load saved config for this persona on the current model
-        let nextConfig = loadConfig(currentModelId, persona.id, config);
+        const nextConfig: AppConfig = {
+            ...config,
+            selectedPersonaId: persona.id,
+            systemInstructions: persona.systemInstruction,
+            // Apply per-model voice defaults from persona constant
+            ...(voiceConfig.voice && { voice: voiceConfig.voice }),
+            ...(voiceConfig.ttsEngine && { ttsEngine: voiceConfig.ttsEngine }),
+            ...(voiceConfig.ttsVoice && { ttsVoice: voiceConfig.ttsVoice }),
+        };
 
-        // If no model-specific save existed, seed with persona defaults
-        const modelKey = getStorageKey(currentModelId, persona.id);
-        if (!localStorage.getItem(modelKey)) {
-            nextConfig = {
-                ...nextConfig,
-                selectedPersonaId: persona.id,
-                systemInstructions: persona.systemInstruction,
-                voice: persona.voice,
-                ttsVoice: persona.voice,
-            };
-        }
-
-        // Ensure common fields are correct
-        nextConfig.selectedPersonaId = persona.id;
-        nextConfig.provider = currentModelId;
-
-        saveConfig(nextConfig);
         onConfigChange(nextConfig);
     };
 
     const handleModelChange = (newModelKey: string) => {
         if (newModelKey === currentModelId) return;
 
-        // Save current state before leaving
-        saveConfig(config);
+        // Save current model's config before switching
+        saveModelConfig(config);
 
-        // Load targeted model with current persona
-        // Common fields (apiKey, selectedPersonaId) are loaded automatically by loadConfig
+        // Load the new model's config (returns defaults if no save exists)
+        let nextConfig = loadModelConfig(newModelKey);
+
+        // If this is the first time on this model (no saved config), apply field defaults
         const newModelDef = MODEL_REGISTRY[newModelKey];
-        const defaults: AppConfig = {
-            ...config,
-            provider: newModelKey,
-            modelId: newModelDef.modelId,
-        };
-
-        let nextConfig = loadConfig(newModelKey, config.selectedPersonaId, defaults);
-
-        // If no saved config existed for this model+persona, build from field defaults
-        const modelKey = getStorageKey(newModelKey, config.selectedPersonaId);
-        if (!localStorage.getItem(modelKey)) {
-            const fieldDefaults: any = {};
+        if (!localStorage.getItem(`config_${newModelKey}`)) {
+            const defaults: any = {};
             newModelDef.uiGroups.forEach((group: any) => {
                 if (group.sections) {
                     group.sections.forEach((section: any) => {
                         const effectiveSettings = getEffectiveSettings(newModelDef.requiresTTS ?? false, section.settings);
                         effectiveSettings.forEach((settingId: string) => {
                             if (settingId !== 'persona' && FIELD_DEFINITIONS[settingId]?.defaultValue !== undefined) {
-                                fieldDefaults[settingId] = FIELD_DEFINITIONS[settingId].defaultValue;
+                                defaults[settingId] = FIELD_DEFINITIONS[settingId].defaultValue;
                             }
                         });
                     });
@@ -164,7 +140,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                     const effectiveSettings = getEffectiveSettings(newModelDef.requiresTTS ?? false, group.settings);
                     effectiveSettings.forEach((settingId: string) => {
                         if (settingId !== 'persona' && FIELD_DEFINITIONS[settingId]?.defaultValue !== undefined) {
-                            fieldDefaults[settingId] = FIELD_DEFINITIONS[settingId].defaultValue;
+                            defaults[settingId] = FIELD_DEFINITIONS[settingId].defaultValue;
                         }
                     });
                 }
@@ -172,14 +148,13 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
 
             nextConfig = {
                 ...nextConfig,
-                ...fieldDefaults,
+                ...defaults,
                 provider: newModelKey,
                 modelId: newModelDef.modelId,
             };
         }
 
         nextConfig.provider = newModelKey;
-        saveConfig(nextConfig);
         onConfigChange(nextConfig);
     };
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AppConfig, MediaConfig, ConnectionState, Message, ThemeConfig } from './types';
 import { DEFAULT_CONFIG, DEFAULT_MEDIA_CONFIG, INITIAL_MESSAGES, DEFAULT_THEME_CONFIG } from './constants';
-import { getStorageKey, COMMON_STORAGE_KEY, loadConfig, saveConfig } from './utils/model-registry';
+import { loadModelConfig, saveModelConfig } from './utils/model-registry';
 import ConfigurationMenu from './components/ConfigurationMenu';
 import MediaControlHub from './components/MediaControlHub';
 import Stage from './components/Stage';
@@ -35,31 +35,15 @@ const App: React.FC = () => {
     // State
     const [config, setConfig] = useState<AppConfig>(() => {
         try {
-            // Determine last used provider + persona from common config
-            const savedCommon = localStorage.getItem(COMMON_STORAGE_KEY);
+            // Determine which model was last used
+            const routing = localStorage.getItem('app_config');
             let provider = DEFAULT_CONFIG.provider;
-            let personaId = DEFAULT_CONFIG.selectedPersonaId;
-
-            if (savedCommon) {
-                const parsed = JSON.parse(savedCommon);
-                if (parsed.selectedPersonaId) personaId = parsed.selectedPersonaId;
-            }
-
-            // Also check legacy 'app_config' for the provider (backward compat)
-            const legacyConfig = localStorage.getItem('app_config');
-            if (legacyConfig) {
-                const parsed = JSON.parse(legacyConfig);
+            if (routing) {
+                const parsed = JSON.parse(routing);
                 if (parsed.provider) provider = parsed.provider;
-                // Migrate: if we have legacy but no common, seed common from legacy
-                if (!savedCommon && parsed.apiKey) {
-                    localStorage.setItem(COMMON_STORAGE_KEY, JSON.stringify({
-                        apiKey: parsed.apiKey,
-                        selectedPersonaId: parsed.selectedPersonaId || personaId,
-                    }));
-                }
             }
-
-            return loadConfig(provider, personaId, DEFAULT_CONFIG);
+            // Load the full config for that model
+            return loadModelConfig(provider);
         } catch (e) {
             console.error("Failed to load config from localStorage", e);
         }
@@ -93,11 +77,9 @@ const App: React.FC = () => {
         return DEFAULT_THEME_CONFIG;
     });
 
-    // Save config to localStorage whenever it changes (split: common + model-specific)
+    // Save config to localStorage whenever it changes (per-model)
     React.useEffect(() => {
-        saveConfig(config);
-        // Also save to legacy key for backward compat (will be read on first load if no common key)
-        localStorage.setItem('app_config', JSON.stringify(config));
+        saveModelConfig(config);
     }, [config]);
 
     React.useEffect(() => {

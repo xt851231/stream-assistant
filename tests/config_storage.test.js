@@ -1,174 +1,252 @@
 /**
- * Tests for config storage architecture:
- * - Common config (apiKey, selectedPersonaId) persists across model switches
- * - Model-specific config is saved/loaded independently per provider+persona
- * - Switching models preserves common fields and loads model-specific fields
+ * Tests for per-model config storage architecture:
+ * - Each model has its own independent config
+ * - Persona voice defaults are per-model
+ * - New models start with defaults from constants
+ * - Model switching saves/loads correctly
  */
-import { describe, it, mock, beforeEach } from 'node:test';
+import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
+import fs from 'node:fs';
+import path from 'node:path';
 
-// ============================================================
-// Define the expected architecture
-// ============================================================
+// ========================================
+// Read source files for static analysis
+// ========================================
+const typesSource = fs.readFileSync(path.resolve('types.ts'), 'utf8');
+const constantsSource = fs.readFileSync(path.resolve('constants.ts'), 'utf8');
+const registrySource = fs.readFileSync(path.resolve('utils/model-registry.ts'), 'utf8');
+const appSource = fs.readFileSync(path.resolve('App.tsx'), 'utf8');
+const configMenuSource = fs.readFileSync(path.resolve('components/ConfigurationMenu.tsx'), 'utf8');
 
-/**
- * Common fields: These must persist across ALL model switches.
- * They are stored once under 'app_common_config'.
- */
-const COMMON_FIELDS = ['apiKey', 'selectedPersonaId'];
+// ========================================
+// Architecture Tests
+// ========================================
 
-/**
- * Storage keys:
- *   'app_common_config'              → { apiKey, selectedPersonaId }
- *   'config_{provider}_{personaId}'  → { all model-specific fields }
- */
+describe('Per-Model Config Storage Architecture', () => {
 
-describe('Config Storage Architecture', () => {
+    describe('Types', () => {
+        it('should have PersonaVoiceConfig interface', () => {
+            assert.ok(typesSource.includes('interface PersonaVoiceConfig'),
+                'types.ts must define PersonaVoiceConfig');
+        });
 
-    // In-memory localStorage mock
+        it('Persona should have voiceDefaults, not voice', () => {
+            assert.ok(typesSource.includes('voiceDefaults'),
+                'Persona must have voiceDefaults field');
+            // Should not have a plain 'voice: string' in the Persona interface
+            // (AppConfig still has voice, but Persona should use voiceDefaults)
+            const personaBlock = typesSource.slice(
+                typesSource.indexOf('interface Persona'),
+                typesSource.indexOf('}', typesSource.indexOf('interface Persona')) + 1
+            );
+            assert.ok(!personaBlock.includes('voice: string'),
+                'Persona interface should not have a plain voice: string field');
+        });
+    });
+
+    describe('Constants', () => {
+        it('each persona should have voiceDefaults with gemini-live and gemini-flash-rest', () => {
+            // Check that voiceDefaults appears for each persona
+            const personaMatches = constantsSource.match(/voiceDefaults:\s*\{/g);
+            assert.ok(personaMatches && personaMatches.length >= 4,
+                'All 4 personas should have voiceDefaults');
+        });
+
+        it('should export getPersonaVoiceForModel helper', () => {
+            assert.ok(constantsSource.includes('function getPersonaVoiceForModel'),
+                'constants.ts must export getPersonaVoiceForModel');
+        });
+
+        it('gemini-live voice defaults should use native voice field', () => {
+            assert.ok(constantsSource.includes("'gemini-live': { voice:"),
+                'gemini-live voiceDefaults should set native voice');
+        });
+
+        it('gemini-flash-rest voice defaults should use ttsEngine and ttsVoice', () => {
+            assert.ok(constantsSource.includes("ttsEngine: 'gemini'"),
+                'gemini-flash-rest voiceDefaults should set ttsEngine');
+            assert.ok(constantsSource.includes("ttsVoice:"),
+                'gemini-flash-rest voiceDefaults should set ttsVoice');
+        });
+    });
+
+    describe('Model Registry', () => {
+        it('getStorageKey should take only provider (no persona)', () => {
+            // Signature: getStorageKey(provider: string): string
+            assert.ok(registrySource.includes('getStorageKey(provider: string): string'),
+                'getStorageKey should accept only one param: provider');
+        });
+
+        it('should export saveModelConfig', () => {
+            assert.ok(registrySource.includes('function saveModelConfig'),
+                'model-registry must export saveModelConfig');
+        });
+
+        it('should export loadModelConfig', () => {
+            assert.ok(registrySource.includes('function loadModelConfig'),
+                'model-registry must export loadModelConfig');
+        });
+
+        it('saveModelConfig should save to config_{provider} key', () => {
+            assert.ok(registrySource.includes('getStorageKey(config.provider)'),
+                'saveModelConfig should use config_{provider} key');
+        });
+
+        it('saveModelConfig should also save provider routing to app_config', () => {
+            assert.ok(registrySource.includes("localStorage.setItem('app_config'"),
+                'saveModelConfig should update app_config for routing');
+        });
+    });
+
+    describe('App.tsx', () => {
+        it('should use loadModelConfig for initial load', () => {
+            assert.ok(appSource.includes('loadModelConfig'),
+                'App.tsx should use loadModelConfig');
+        });
+
+        it('should use saveModelConfig in useEffect', () => {
+            assert.ok(appSource.includes('saveModelConfig(config)'),
+                'App.tsx useEffect should call saveModelConfig');
+        });
+
+        it('should NOT use old getStorageKey with two params', () => {
+            assert.ok(!appSource.includes('getStorageKey('),
+                'App.tsx should not use getStorageKey directly');
+        });
+    });
+
+    describe('ConfigurationMenu', () => {
+        it('should import saveModelConfig and loadModelConfig', () => {
+            assert.ok(configMenuSource.includes('saveModelConfig'),
+                'ConfigurationMenu must import saveModelConfig');
+            assert.ok(configMenuSource.includes('loadModelConfig'),
+                'ConfigurationMenu must import loadModelConfig');
+        });
+
+        it('should import getPersonaVoiceForModel', () => {
+            assert.ok(configMenuSource.includes('getPersonaVoiceForModel'),
+                'ConfigurationMenu must import getPersonaVoiceForModel');
+        });
+
+        it('handlePersonaSelect should use getPersonaVoiceForModel', () => {
+            assert.ok(configMenuSource.includes('getPersonaVoiceForModel(persona, currentModelId)'),
+                'handlePersonaSelect should call getPersonaVoiceForModel');
+        });
+
+        it('handleModelChange should call saveModelConfig before switching', () => {
+            // saveModelConfig(config) should appear before loadModelConfig
+            const saveIdx = configMenuSource.indexOf('saveModelConfig(config)');
+            const loadIdx = configMenuSource.indexOf('loadModelConfig(newModelKey)');
+            assert.ok(saveIdx > 0 && loadIdx > 0 && saveIdx < loadIdx,
+                'handleModelChange should save before loading');
+        });
+
+        it('should NOT use old getStorageKey with persona param', () => {
+            assert.ok(!configMenuSource.includes('getStorageKey(currentModelId, '),
+                'ConfigurationMenu should not use old 2-param getStorageKey');
+        });
+    });
+});
+
+describe('Per-Model Config Logic (simulated)', () => {
+    // Simulated localStorage
     let storage;
 
     beforeEach(() => {
         storage = {};
     });
 
-    function getItem(key) {
-        return storage[key] || null;
+    function getItem(key) { return storage[key] || null; }
+    function setItem(key, value) { storage[key] = value; }
+
+    function getStorageKey(provider) { return `config_${provider}`; }
+
+    function saveModelConfig(config) {
+        setItem(getStorageKey(config.provider), JSON.stringify(config));
+        setItem('app_config', JSON.stringify({ provider: config.provider }));
     }
 
-    function setItem(key, value) {
-        storage[key] = value;
+    function loadModelConfig(provider, defaults) {
+        const saved = getItem(getStorageKey(provider));
+        if (saved) return { ...defaults, ...JSON.parse(saved), provider };
+        return { ...defaults, provider };
     }
 
-    // The helper function we expect to exist
-    function getStorageKey(provider, personaId) {
-        return `config_${provider}_${personaId}`;
-    }
+    it('API keys should be independent per model', () => {
+        const liveConfig = { provider: 'gemini-live', apiKey: 'LIVE_KEY', voice: 'Fenrir', temperature: 0.9 };
+        saveModelConfig(liveConfig);
 
-    // Simulate extractCommonConfig
-    function extractCommonConfig(config) {
-        const common = {};
-        for (const field of COMMON_FIELDS) {
-            if (config[field] !== undefined) {
-                common[field] = config[field];
-            }
-        }
-        return common;
-    }
+        const restConfig = { provider: 'gemini-flash-rest', apiKey: 'REST_KEY', ttsVoice: 'Puck', temperature: 0.3 };
+        saveModelConfig(restConfig);
 
-    // Simulate extractModelConfig (everything except common fields)
-    function extractModelConfig(config) {
-        const modelConfig = { ...config };
-        for (const field of COMMON_FIELDS) {
-            delete modelConfig[field];
-        }
-        return modelConfig;
-    }
+        const loadedLive = loadModelConfig('gemini-live', {});
+        const loadedRest = loadModelConfig('gemini-flash-rest', {});
 
-    it('Common fields should persist when switching from Live to REST', () => {
-        // User sets apiKey in Live mode
-        const liveConfig = {
-            provider: 'gemini-live',
-            apiKey: 'MY_SECRET_KEY',
-            selectedPersonaId: 'felix',
-            modelId: 'gemini-2.5-flash-native-audio-preview',
-            voice: 'Puck',
-            temperature: 0.7,
-        };
-
-        // Save common config
-        const commonConfig = extractCommonConfig(liveConfig);
-        setItem('app_common_config', JSON.stringify(commonConfig));
-
-        // Save model-specific config
-        const liveModelConfig = extractModelConfig(liveConfig);
-        setItem(getStorageKey('gemini-live', 'felix'), JSON.stringify(liveModelConfig));
-
-        // Now switch to REST mode
-        const savedCommon = JSON.parse(getItem('app_common_config'));
-        const restModelKey = getStorageKey('gemini-flash-rest', 'felix');
-        const savedRest = getItem(restModelKey);
-
-        let restConfig;
-        if (savedRest) {
-            restConfig = { ...JSON.parse(savedRest), ...savedCommon };
-        } else {
-            // First time on REST, common + defaults
-            restConfig = {
-                ...savedCommon,
-                provider: 'gemini-flash-rest',
-                modelId: 'gemini-2.5-flash',
-                temperature: 0.7,
-            };
-        }
-
-        // API key MUST survive the switch
-        assert.strictEqual(restConfig.apiKey, 'MY_SECRET_KEY',
-            'API key must persist when switching models');
-        assert.strictEqual(restConfig.selectedPersonaId, 'felix',
-            'Selected persona must persist when switching models');
+        assert.strictEqual(loadedLive.apiKey, 'LIVE_KEY');
+        assert.strictEqual(loadedRest.apiKey, 'REST_KEY');
+        assert.notStrictEqual(loadedLive.apiKey, loadedRest.apiKey);
     });
 
-    it('Model-specific fields should be independent between modes', () => {
-        // Live mode has voice=Puck
-        const liveModelConfig = { provider: 'gemini-live', modelId: 'live-model', voice: 'Puck', temperature: 0.9 };
-        setItem(getStorageKey('gemini-live', 'felix'), JSON.stringify(liveModelConfig));
+    it('switching models round-trips correctly', () => {
+        // Set up Live
+        saveModelConfig({ provider: 'gemini-live', apiKey: 'KEY1', voice: 'Fenrir', temperature: 1.0 });
+        // Set up REST
+        saveModelConfig({ provider: 'gemini-flash-rest', apiKey: 'KEY2', topK: 40, temperature: 0.5 });
 
-        // REST mode has different temperature
-        const restModelConfig = { provider: 'gemini-flash-rest', modelId: 'rest-model', temperature: 0.3, topK: 40 };
-        setItem(getStorageKey('gemini-flash-rest', 'felix'), JSON.stringify(restModelConfig));
+        // Switch to Live
+        const live = loadModelConfig('gemini-live', {});
+        assert.strictEqual(live.apiKey, 'KEY1');
+        assert.strictEqual(live.voice, 'Fenrir');
+        assert.strictEqual(live.temperature, 1.0);
 
-        // Load Live
-        const loadedLive = JSON.parse(getItem(getStorageKey('gemini-live', 'felix')));
-        assert.strictEqual(loadedLive.voice, 'Puck');
-        assert.strictEqual(loadedLive.temperature, 0.9);
+        // Switch to REST
+        const rest = loadModelConfig('gemini-flash-rest', {});
+        assert.strictEqual(rest.apiKey, 'KEY2');
+        assert.strictEqual(rest.topK, 40);
+        assert.strictEqual(rest.temperature, 0.5);
 
-        // Load REST  
-        const loadedRest = JSON.parse(getItem(getStorageKey('gemini-flash-rest', 'felix')));
-        assert.strictEqual(loadedRest.temperature, 0.3);
-        assert.strictEqual(loadedRest.topK, 40);
-
-        // They must NOT contaminate each other
-        assert.strictEqual(loadedRest.voice, undefined, 'REST should not inherit Live voice');
+        // Switch back to Live
+        const live2 = loadModelConfig('gemini-live', {});
+        assert.strictEqual(live2.apiKey, 'KEY1');
     });
 
-    it('Persona info should survive model switches', () => {
-        const common = { apiKey: 'KEY', selectedPersonaId: 'luna' };
-        setItem('app_common_config', JSON.stringify(common));
+    it('new model starts with defaults', () => {
+        const defaults = { provider: 'new-model', apiKey: '', voice: 'Puck', temperature: 0.7 };
+        const config = loadModelConfig('new-model', defaults);
 
-        // Luna has specific system instructions on Live
-        const lunaLive = {
-            provider: 'gemini-live',
-            systemInstructions: 'You are Luna, a mystical elf.',
-            voice: 'Kore',
-        };
-        setItem(getStorageKey('gemini-live', 'luna'), JSON.stringify(lunaLive));
-
-        // Switch to REST - Luna should show up from common, even if no REST-specific save
-        const loadedCommon = JSON.parse(getItem('app_common_config'));
-        assert.strictEqual(loadedCommon.selectedPersonaId, 'luna');
+        assert.strictEqual(config.provider, 'new-model');
+        assert.strictEqual(config.apiKey, ''); // No saved key
+        assert.strictEqual(config.voice, 'Puck'); // From defaults
     });
 
-    it('Saving config should split into common + model-specific', () => {
-        const fullConfig = {
-            apiKey: 'KEY123',
-            selectedPersonaId: 'kai',
-            provider: 'gemini-live',
-            modelId: 'some-model',
-            voice: 'Fenrir',
-            temperature: 1.2,
+    it('persona voice defaults should differ by model', () => {
+        // Simulate getPersonaVoiceForModel
+        const felixVoiceDefaults = {
+            'gemini-live': { voice: 'Fenrir' },
+            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Fenrir' }
         };
 
-        const common = extractCommonConfig(fullConfig);
-        const modelSpecific = extractModelConfig(fullConfig);
+        function getPersonaVoiceForModel(provider) {
+            return felixVoiceDefaults[provider] || {};
+        }
 
-        // Common should only have common fields
-        assert.deepStrictEqual(Object.keys(common).sort(), ['apiKey', 'selectedPersonaId']);
-        assert.strictEqual(common.apiKey, 'KEY123');
+        const liveVoice = getPersonaVoiceForModel('gemini-live');
+        assert.strictEqual(liveVoice.voice, 'Fenrir');
+        assert.strictEqual(liveVoice.ttsEngine, undefined);
 
-        // Model-specific should NOT have common fields
-        assert.strictEqual(modelSpecific.apiKey, undefined);
-        assert.strictEqual(modelSpecific.selectedPersonaId, undefined);
-        assert.strictEqual(modelSpecific.voice, 'Fenrir');
+        const restVoice = getPersonaVoiceForModel('gemini-flash-rest');
+        assert.strictEqual(restVoice.ttsEngine, 'gemini');
+        assert.strictEqual(restVoice.ttsVoice, 'Fenrir');
+        assert.strictEqual(restVoice.voice, undefined);
+    });
+
+    it('app_config should only store provider for routing', () => {
+        saveModelConfig({ provider: 'gemini-live', apiKey: 'KEY', voice: 'Puck' });
+
+        const routing = JSON.parse(getItem('app_config'));
+        assert.strictEqual(routing.provider, 'gemini-live');
+        // Should NOT contain apiKey or other config fields
+        assert.strictEqual(routing.apiKey, undefined);
     });
 });

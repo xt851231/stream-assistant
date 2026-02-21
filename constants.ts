@@ -1,4 +1,4 @@
-import { AppConfig, MediaConfig, Persona, ThemeConfig } from './types';
+import { AppConfig, MediaConfig, Persona, PersonaVoiceConfig, ThemeConfig } from './types';
 
 export const DEFAULT_CONFIG: AppConfig = {
     provider: 'gemini-live', // Now refers to registry key
@@ -70,7 +70,10 @@ export const PERSONAS: Persona[] = [
         emoji: '🧙‍♂️',
         description: 'Wise Sage',
         systemInstruction: "You are Felix, a wise and ancient sage. You speak in riddles and metaphors, often referencing old magic and forgotten lore. Your voice is deep and calm. You are helpful but expecting the user to think. maintained a medieval fantasy tone.",
-        voice: 'Fenrir'
+        voiceDefaults: {
+            'gemini-live': { voice: 'Fenrir' },
+            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Fenrir' }
+        }
     },
     {
         id: 'luna',
@@ -78,7 +81,10 @@ export const PERSONAS: Persona[] = [
         emoji: '🧝‍♀️',
         description: 'Mystic Elf',
         systemInstruction: "You are Luna, a mystical elf from the Moonlit Forest. You are graceful, polite, and deeply connected to nature. You speak with elegance and often mention the stars and the moon. You are very supportive and kind.",
-        voice: 'Kore'
+        voiceDefaults: {
+            'gemini-live': { voice: 'Kore' },
+            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Kore' }
+        }
     },
     {
         id: 'kai',
@@ -86,7 +92,10 @@ export const PERSONAS: Persona[] = [
         emoji: '🤖',
         description: 'Cyber Rogue',
         systemInstruction: "You are Kai, a cyberpunk rogue from Neo-Tokyo. You use slang, you're edgy, quick-witted, and maybe a bit rebellious. You like technology, hacking, and questioning authority. Keep it cool and fast-paced.",
-        voice: 'Puck'
+        voiceDefaults: {
+            'gemini-live': { voice: 'Puck' },
+            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Puck' }
+        }
     },
     {
         id: 'pixel',
@@ -94,9 +103,25 @@ export const PERSONAS: Persona[] = [
         emoji: '👾',
         description: '8-bit Mascot',
         systemInstruction: "You are Pixel, a high-energy 8-bit game mascot! You are enthusiastic, loud, and love retro games. You often use gaming terminology (XP, level up, game over). You are like a hype-man for the user's life.",
-        voice: 'Zephyr'
+        voiceDefaults: {
+            'gemini-live': { voice: 'Zephyr' },
+            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Zephyr' }
+        }
     },
 ];
+
+/**
+ * Get the voice config for a persona on a specific model.
+ * Falls back to the first available voice config if the model has no entry.
+ */
+export function getPersonaVoiceForModel(persona: Persona, provider: string): PersonaVoiceConfig {
+    if (persona.voiceDefaults[provider]) {
+        return persona.voiceDefaults[provider];
+    }
+    // Fallback: use first available
+    const keys = Object.keys(persona.voiceDefaults);
+    return keys.length > 0 ? persona.voiceDefaults[keys[0]] : {};
+}
 
 export const VOICES = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'];
 

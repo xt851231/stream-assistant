@@ -1,33 +1,5 @@
 # Learnings
 
-## [2026-02-21 13:36] Fix Config Persistence: Split Common vs Model-Specific Storage
-
-**The Problem:**
-- API key was lost when switching between Live API and REST API modes.
-- Persona info (system instructions, voice) was missing after switching modes.
-- All config fields were stored together in a flat `app_config` key, causing cross-contamination between models.
-
-**Root Cause:**
-- `handleModelChange` in `ConfigurationMenu.tsx` built defaults from `FIELD_DEFINITIONS`, but fields like `apiKey` have no `defaultValue` → set to `undefined`, overwriting the user's key.
-- The entire `AppConfig` was saved/loaded as a monolith — switching models loaded the full blob, potentially clobbering common fields with stale or empty values.
-
-**The Solution:**
-Split localStorage into two tiers:
-1. **Common Config** (`app_common_config`): `apiKey`, `selectedPersonaId` — persists across ALL model switches.
-2. **Model-Specific Config** (`config_{provider}_{personaId}`): everything else (voice, temperature, VAD, TTS, etc.) — saved/loaded independently per provider+persona combo.
-
-New helpers in `model-registry.ts`:
-- `extractCommonConfig(config)` → extracts only common fields
-- `extractModelConfig(config)` → removes common fields
-- `saveConfig(config)` → splits and saves to both keys
-- `loadConfig(provider, personaId, defaults)` → merges common + model-specific
-
-**Key Changes:**
-- `utils/model-registry.ts`: Added `COMMON_FIELDS`, `COMMON_STORAGE_KEY`, and 4 helper functions
-- `App.tsx`: Rewrote config loading to use `loadConfig()`, saves via `saveConfig()`
-- `components/ConfigurationMenu.tsx`: Updated `handleChange`, `handlePersonaSelect`, `handleModelChange` to use split storage
-- `tests/config_storage.test.js`: 4 architecture tests
-
 ## [2026-02-21 13:22] Cherry-Picked Accessibility, Security & Refactoring from Jules Branches
 
 **The Problem:**
