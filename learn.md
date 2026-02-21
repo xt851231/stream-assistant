@@ -1,5 +1,46 @@
 # Learnings
 
+## [2026-02-21 11:12] Cherry-Picked Performance Optimizations from Jules Branch
+
+**The Problem:**
+- The `capture.worklet.js` was sending raw Float32 audio data to the main thread, requiring CPU-intensive PCM16 conversion and RMS calculation on the UI thread.
+- `GeminiLiveAdapter.handleIncomingMessage()` had 6 active `console.log` calls on every incoming message/audio chunk, creating GC pressure during streaming.
+- `Stage.tsx` ResizeObserver was torn down and recreated on every `tool`/`color`/`brushSize` prop change due to over-broad dependency array.
+
+**Root Cause:**
+- Audio processing (Float32→Int16 conversion + RMS) was architecturally misplaced — it ran on the main thread instead of the AudioWorklet thread.
+- Debug logging was left active from development.
+- React effect dependencies weren't optimized for the ResizeObserver pattern.
+
+**The Solution:**
+1. **Worklet-Side Processing**: Moved PCM16 conversion and RMS calculation into `capture.worklet.js`. Uses asymmetric scaling (`0x8000` for negative, `0x7FFF` for positive) for full Int16 range. Sends `ArrayBuffer` via `Transferable` for zero-copy transfer.
+2. **Media-Utils Cleanup**: Removed `convertToPCM16()` method and main-thread RMS loop from `AudioStreamer`. Now consumes pre-processed `pcmBuffer` and `rms` from worklet messages.
+3. **Console.log Cleanup**: Commented out 6 hot-path `console.log` calls in `GeminiLiveAdapter.handleIncomingMessage()`.
+4. **Stage.tsx Refs**: Used `useRef` for `tool`, `color`, `brushSize` inside ResizeObserver callback, changed dependency array to `[]`.
+
+**Key Changes:**
+- `public/audio-processors/capture.worklet.js`: PCM16 conversion + RMS + Transferable buffer.
+- `lib/utils/media-utils.js`: Removed `convertToPCM16()`, consume pre-processed worklet data.
+- `lib/api/adapters/GeminiLiveAdapter.js`: Commented out 6 hot-path console.logs.
+- `components/Stage.tsx`: useRef pattern for ResizeObserver props.
+- `tests/capture_worklet_perf.test.js`: New test suite validating worklet optimization.
+
+
+
+## [2026-02-21 01:58] Added Project Documentation (README.md)
+
+**The Problem:**
+- The project lacked comprehensive documentation regarding its architecture, file structure, and testing procedures.
+
+**Root Cause:**
+- Focus was primarily on engineering fixes and feature implementation.
+
+**The Solution:**
+- Created a `README.md` containing a project summary, detailed file structure, brief functional descriptions of key files, startup instructions, and testing guidelines using the native `node:test` runner.
+
+**Key Changes:**
+- `README.md`: Created new comprehensive documentation file.
+
 ## [2026-02-21 01:30] Fixed Live API Audio Playback Glitches & Queue Interruptions
 
 **The Problem:**
@@ -711,3 +752,17 @@ Removed the `onSpeechEnd()` method from `GeminiLiveAdapter.js`. This restores th
 - `vite.config.ts`: Removed `process.env.API_KEY` and `process.env.GEMINI_API_KEY` definitions.
 - `README.md`: Updated instructions to emphasize manual key entry in the UI.
 
+
+## [2026-02-21 02:15] Codified Recurring Patterns into Project Rules
+
+**The Problem:**
+- Several complex bugs (audio ordering, WebSocket 1007 errors, state sync loops) were appearing repeatedly in 'learn.md' but weren't being proactively prevented by the editor's context rules.
+
+**Root Cause:**
+- Critical architectural knowledge was documented as historical learnings but not as active development constraints.
+
+**The Solution:**
+- Scanned historical 'learn.md' entries for patterns and updated 'project_rules.md' with new sections on Audio Serialization, Protocol Conflict Avoidance, Model Response Guards, and Binary Performance.
+
+**Key Changes:**
+- '.agent/rules/project_rules.md': Added 9 new rules across State, Media, API, and Performance categories.

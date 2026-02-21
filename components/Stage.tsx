@@ -21,6 +21,17 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
     const contextRef = useRef<CanvasRenderingContext2D | null>(null);
     const requestRef = useRef<number>();
 
+    // Refs for props to avoid re-creating ResizeObserver
+    const toolRef = useRef(tool);
+    const colorRef = useRef(color);
+    const brushSizeRef = useRef(brushSize);
+
+    useEffect(() => {
+        toolRef.current = tool;
+        colorRef.current = color;
+        brushSizeRef.current = brushSize;
+    }, [tool, color, brushSize]);
+
     // Expose canvas to parent
     useEffect(() => {
         if (canvasRef.current && onCanvasReady) {
@@ -75,9 +86,9 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
                             // Restore context properties
                             ctx.lineCap = 'round';
                             ctx.lineJoin = 'round';
-                            ctx.strokeStyle = tool === 'eraser' ? 'rgba(0,0,0,0)' : (color || '#ffd700');
-                            ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
-                            ctx.lineWidth = brushSize || 4;
+                            ctx.strokeStyle = toolRef.current === 'eraser' ? 'rgba(0,0,0,0)' : (colorRef.current || '#ffd700');
+                            ctx.globalCompositeOperation = toolRef.current === 'eraser' ? 'destination-out' : 'source-over';
+                            ctx.lineWidth = brushSizeRef.current || 4;
                             contextRef.current = ctx;
                         }
                     });
@@ -93,7 +104,7 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
                 cancelAnimationFrame(requestRef.current);
             }
         };
-    }, [tool, color, brushSize]);
+    }, []);
 
     useEffect(() => {
         if (contextRef.current) {
