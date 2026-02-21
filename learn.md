@@ -1,5 +1,22 @@
 # Learnings
 
+## [2026-02-21 23:25] Systematized Media Pipeline Protections
+
+**The Problem:**
+Media-related bugs (stale closures, missing parameters, and stream desync) were repeating across multiple sessions.
+
+**The Solution:**
+Instead of ad-hoc fixes, I formalized the media architecture and defensive coding rules to prevent future regressions.
+
+**Key Changes:**
+- **`conductor/architecture/MEDIA_PIPELINE.md`**: Created a permanent reference for how frames flow.
+- **`.agent/rules/project_rules.md`**: Added three mandatory "Defensive Rules":
+  1. **Ref-First Callbacks**: Mandatory use of `useRef` for any state inside media event handlers.
+  2. **Parameter Totality**: Toggle functions must accept full `config: AppConfig`.
+  3. **Ghost Prevention**: Enforced nulling of refs in `cleanupMedia` to prevent background processing.
+
+See the [MEDIA_PIPELINE.md](file:///home/xt851231/experiments/stream-quest-dashboard/conductor/architecture/MEDIA_PIPELINE.md) for full details.
+
 ## [2026-02-21 21:05] Fixed Missing Config & Uncaught Permission Errors
 
 **The Problem:**
