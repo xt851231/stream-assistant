@@ -8,7 +8,7 @@ import Stage from './components/Stage';
 import Toolbelt from './components/Toolbelt';
 import ChatSidebar from './components/ChatSidebar';
 import { useLiveAPI } from './hooks/useLiveAPI';
-import { Swords, Zap, Settings, Video, Mic, Monitor, MessageSquare } from 'lucide-react';
+import { Swords, Zap, Settings, Video, Mic, Monitor, MessageSquare, Smartphone } from 'lucide-react';
 import { getBgColor } from './lib/utils/style-utils';
 
 const App: React.FC = () => {
@@ -76,6 +76,8 @@ const App: React.FC = () => {
         }
         return DEFAULT_THEME_CONFIG;
     });
+
+    const [isPortrait, setIsPortrait] = useState(false);
 
     // Save config to localStorage whenever it changes (per-model)
     React.useEffect(() => {
@@ -274,7 +276,7 @@ const App: React.FC = () => {
                     backgroundSize: '100% 4px, 6px 100%'
                 }}
             />
-            <div data-component="App" className="aspect-video w-full max-w-[177.78vh] max-h-[96vh] flex flex-col border-4 border-[#1e293b] relative shadow-2xl overflow-hidden shrink-0"
+            <div data-component="App" className={`w-full flex flex-col border-4 border-[#1e293b] relative shadow-2xl overflow-hidden shrink-0 transition-all duration-500 max-h-[96vh] ${isPortrait ? 'aspect-[9/16] max-w-[54vh]' : 'aspect-video max-w-[177.78vh]'}`}
                 style={{ backgroundColor: themeConfig.backgroundImage ? 'transparent' : '#111722' }}
             >
 
@@ -336,7 +338,7 @@ const App: React.FC = () => {
                 {/* Main Content Flex with Gap and Padding + Background Image */}
                 <section
                     id="content-area"
-                    className="flex-1 flex overflow-hidden p-6 relative transition-colors duration-300"
+                    className={`flex-1 flex overflow-hidden p-6 relative transition-colors duration-300 ${isPortrait ? 'flex-col gap-4 p-4' : 'flex-row'}`}
                     style={{
                         backgroundColor: themeConfig.backgroundImage ? 'rgba(17, 23, 34, 0.3)' : '#111722',
                     }}
@@ -380,6 +382,13 @@ const App: React.FC = () => {
                                 {/* Quick Toggles */}
                                 <div className="flex gap-2 items-center relative z-50">
                                     <button
+                                        onClick={() => setIsPortrait(!isPortrait)}
+                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isPortrait ? 'bg-[#ffd700] border-white' : 'bg-blue-900'}`}
+                                        title={isPortrait ? "Switch to Landscape Mode" : "Switch to Portrait Mode"}
+                                    >
+                                        <Smartphone size={18} className={isPortrait ? 'text-black' : 'text-white'} />
+                                    </button>
+                                    <button
                                         ref={settingsButtonRef}
                                         onClick={() => { setIsConfigOpen(!isConfigOpen); setIsMediaOpen(false); }}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isConfigOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
@@ -397,14 +406,23 @@ const App: React.FC = () => {
                                     <button
                                         onClick={() => toggleAudio(!audioStreaming, 'default', config)}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${audioStreaming ? 'bg-[#ffd700] border-white' : 'bg-blue-900'}`}
+                                        title={audioStreaming ? "Microphone On" : "Microphone Off"}
                                     >
-                                        <Mic size={18} className={audioStreaming ? 'text-black' : 'text-white'} />
+                                        <Mic size={20} className={audioStreaming ? "text-gray-900" : "text-gray-300 drop-shadow-md group-hover:text-white"} />
+                                    </button>
+                                    <button
+                                        onClick={() => toggleVideo(!videoStream)}
+                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${!!videoStream ? 'bg-[#ffd700] border-white' : 'bg-blue-900'} ${isPortrait ? 'hidden' : ''}`}
+                                        title={!!videoStream ? "Camera On" : "Camera Off"}
+                                    >
+                                        <Video size={20} className={!!videoStream ? "text-gray-900" : "text-gray-300 drop-shadow-md group-hover:text-white"} />
                                     </button>
                                     <button
                                         onClick={() => toggleScreen(!screenSharing, config, mediaConfig.screenAudio)}
-                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${screenSharing ? 'bg-[#ffd700] border-white' : 'bg-blue-900'}`}
+                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${screenSharing ? 'bg-[#ffd700] border-white' : 'bg-blue-900'} ${isPortrait ? 'hidden' : ''}`}
+                                        title={screenSharing ? "Screen Share On" : "Screen Share Off"}
                                     >
-                                        <Monitor size={18} className={screenSharing ? 'text-black' : 'text-white'} />
+                                        <Monitor size={20} className={screenSharing ? "text-gray-900" : "text-gray-300 drop-shadow-md group-hover:text-white"} />
                                     </button>
                                     <button
                                         onClick={() => setIsChatOpen(!isChatOpen)}
@@ -437,6 +455,7 @@ const App: React.FC = () => {
                                     videoStream={videoStream}
                                     onCanvasReady={setOverlayCanvas}
                                     themeConfig={themeConfig}
+                                    isPortrait={isPortrait}
                                     style={{
                                         backgroundColor: getBgColor('#000000', themeConfig?.opacity?.mainStage || 0.8)
                                     }}
@@ -459,9 +478,9 @@ const App: React.FC = () => {
                     {/* Sidebar Container with Transition */}
                     <aside
                         id="sidebar-panel"
-                        className={`flex flex-col shrink-0 h-full transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden ${isChatOpen
-                            ? 'w-[22%] ml-6 translate-x-0'
-                            : 'w-0 ml-0 translate-x-10'
+                        className={`flex flex-col shrink-0 h-full transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden ${isPortrait
+                            ? (isChatOpen ? 'w-full h-[40%] translate-y-0 order-2' : 'h-0 translate-y-10 order-2')
+                            : (isChatOpen ? 'w-[22%] h-full ml-6 translate-x-0' : 'w-0 h-full ml-0 translate-x-10')
                             }`}
                         style={{
                             opacity: isChatOpen ? 1 : 0, // Control visibility animation

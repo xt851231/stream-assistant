@@ -812,3 +812,26 @@ Removed the `onSpeechEnd()` method from `GeminiLiveAdapter.js`. This restores th
 
 **Key Changes:**
 - '.agent/rules/project_rules.md': Added 9 new rules across State, Media, API, and Performance categories.
+
+## [2026-02-21 19:45] Implemented Portrait Mode Layout
+
+**The Problem:**
+- The application was locked to a 16:9 landscape layout, making it suboptimal for portrait-first streaming platforms like TikTok.
+- There was no way to toggle between portrait and landscape modes.
+
+**Root Cause:**
+- Outer containers and inner elements were hardcoded to `aspect-video` and specific horizontal/vertical alignments based on landscape requirements.
+
+**The Solution:**
+- Added a local `isPortrait` state to `App.tsx`, toggled by a new 'Smartphone' icon in the toolbar.
+- The 'Camera' and 'Screen Share' quick toggles in the toolbar remain accessible in landscape mode, but are hidden when portrait mode is active to conserve horizontal space.
+- Implemented dynamic layout logic:
+  - When `isPortrait` is true, the main app container becomes `aspect-[9/16]` and uses a vertical column layout (`flex-col`).
+  - The `Stage` strictly maintains a 16:9 inner ratio using `w-full` logic to prevent stretching out of bounds.
+  - The `ChatSidebar` stretches horizontally (`w-full h-[40%]`) in portrait mode.
+  - The `Toolbelt` hides its size/palette options when in portrait mode.
+
+**Key Changes:**
+- `App.tsx`: Added `isPortrait` state, dynamic layout classes, and modified toolbar layout to hide extra media buttons only when portrait mode is true.
+- `components/Stage.tsx`: Accepted `isPortrait` prop and updated classes to `w-full` in portrait to preserve 16:9 without overflow.
+- `components/Toolbelt.tsx`: Accepted `isPortrait` prop and conditionally hid wide UI elements.

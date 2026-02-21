@@ -10,9 +10,10 @@ interface StageProps {
     onCanvasReady?: (canvas: HTMLCanvasElement) => void;
     style?: React.CSSProperties;
     themeConfig?: any; // Avoiding circular dependency for now, or use ThemeConfig
+    isPortrait?: boolean;
 }
 
-const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStream, onCanvasReady, style, themeConfig }) => {
+const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStream, onCanvasReady, style, themeConfig, isPortrait }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -153,7 +154,7 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
             style={style}
         >
             {/* 16:9 Stage Area Wrapper */}
-            <div ref={stageRef} className="relative h-full aspect-video max-w-full rpg-window rpg-window-gold shadow-2xl overflow-hidden">
+            <div ref={stageRef} className={`relative aspect-video rpg-window rpg-window-gold shadow-2xl overflow-hidden ${isPortrait ? 'w-full' : 'h-full max-w-full'}`}>
                 {/* Decorative Corners */}
                 <div className="absolute top-0 left-0 size-6 border-t-4 border-l-4 border-[#ffd700] z-20 pointer-events-none"></div>
                 <div className="absolute top-0 right-0 size-6 border-t-4 border-r-4 border-[#ffd700] z-20 pointer-events-none"></div>
