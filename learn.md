@@ -1,5 +1,27 @@
 # Learnings
 
+## [2026-02-21 14:20] Per-Model Config Storage with Per-Model Persona Voice Defaults
+
+**The Problem:**
+Config was stored in a flat `app_config` key. Switching models lost API keys, personas, and voice settings. Each model should have independent config including its own API key.
+
+**Root Cause:**
+`handleModelChange` built defaults from `FIELD_DEFINITIONS` where `apiKey` has no `defaultValue` → set to `undefined`, overwriting the user's key. The monolithic config blob caused cross-contamination.
+
+**The Solution:**
+Per-model storage: `config_{provider}` stores the full `AppConfig` for each model. `app_config` stores only `{ provider }` for routing on reload. MediaConfig and ThemeConfig remain global.
+
+Persona voiceDefaults are now per-model — `Persona.voice: string` → `Persona.voiceDefaults: Record<string, PersonaVoiceConfig>` — so different models can have different voice options.
+
+**Key Changes:**
+- `types.ts`: Added `PersonaVoiceConfig`, changed `Persona.voice` → `Persona.voiceDefaults`
+- `constants.ts`: Updated all personas with `voiceDefaults` per provider, added `getPersonaVoiceForModel()`
+- `utils/model-registry.ts`: Simplified `getStorageKey(provider)`, added `saveModelConfig()`/`loadModelConfig()`
+- `App.tsx`: Uses `loadModelConfig`/`saveModelConfig`
+- `components/ConfigurationMenu.tsx`: All handlers use per-model storage, persona selection uses `getPersonaVoiceForModel`
+- `tests/config_storage.test.js`: 24 architecture + logic tests
+- `tests/tts_config.test.js`: Fixed ESM resolution issue
+
 ## [2026-02-21 13:22] Cherry-Picked Accessibility, Security & Refactoring from Jules Branches
 
 **The Problem:**
