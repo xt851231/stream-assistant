@@ -184,9 +184,9 @@ const App: React.FC = () => {
         }
     };
 
-    const handleSendMessage = (text: string) => {
+    const handleSendMessage = React.useCallback((text: string) => {
         sendMessage(text, config);
-    };
+    }, [sendMessage, config]);
 
     // Media Handlers
     // Media Handlers
@@ -235,13 +235,24 @@ const App: React.FC = () => {
 
 
 
-    const triggerClearStage = () => {
+    const triggerClearStage = React.useCallback(() => {
         // Dispatch custom event for Stage component
         const event = new Event('STAGE_CLEAR');
         document.dispatchEvent(event);
-    };
+    }, []);
 
+    const handleCloseChat = React.useCallback(() => {
+        setIsChatOpen(false);
+    }, []);
 
+    const stageStyle = React.useMemo(() => ({
+        backgroundColor: getBgColor('#000000', themeConfig?.opacity?.mainStage || 0.8)
+    }), [themeConfig?.opacity?.mainStage]);
+
+    const sidebarStyle = React.useMemo(() => ({
+        backgroundColor: getBgColor('#05080c', themeConfig?.opacity?.sidebar || 0.9),
+        backdropFilter: themeConfig?.backgroundImage ? `blur(${(themeConfig?.blur || 0) / 2}px)` : 'none'
+    }), [themeConfig?.opacity?.sidebar, themeConfig?.backgroundImage, themeConfig?.blur]);
 
 
     return (
@@ -448,9 +459,7 @@ const App: React.FC = () => {
                                     videoStream={videoStream}
                                     onCanvasReady={setOverlayCanvas}
                                     themeConfig={themeConfig}
-                                    style={{
-                                        backgroundColor: getBgColor('#000000', themeConfig?.opacity?.mainStage || 0.8)
-                                    }}
+                                    style={stageStyle}
                                 />
 
                                 <Toolbelt
@@ -481,13 +490,10 @@ const App: React.FC = () => {
                         <ChatSidebar
                             messages={messages}
                             onSendMessage={handleSendMessage}
-                            onClose={() => setIsChatOpen(false)}
+                            onClose={handleCloseChat}
                             videoStream={screenSharing ? cameraStream : null}
                             themeConfig={themeConfig}
-                            style={{
-                                backgroundColor: getBgColor('#05080c', themeConfig?.opacity?.sidebar || 0.9),
-                                backdropFilter: themeConfig?.backgroundImage ? `blur(${(themeConfig?.blur || 0) / 2}px)` : 'none'
-                            }}
+                            style={sidebarStyle}
                         />
                     </aside>
                 </section>

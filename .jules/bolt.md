@@ -1,0 +1,3 @@
+## 2024-05-23 - Input State Causes Heavy Component Re-renders
+**Learning:** In `App.tsx`, high-frequency state updates like typing in a text input (`gameTitle`) trigger a re-render of the entire component tree. This causes heavy child components like `Stage` (Canvas/Video) and `ChatSidebar` (list of messages) to re-render on every keystroke, which is a major performance bottleneck.
+**Action:** When designing the top-level `App` component, ensure that heavy child components are wrapped in `React.memo` and receive stable props (via `useCallback`/`useMemo`). Alternatively, move high-frequency local state (like form inputs) into their own smaller components to isolate re-renders.
