@@ -81,7 +81,7 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
 
                         // Restore content
                         const ctx = canvas.getContext('2d');
-                        if (ctx) {
+                        if (ctx && tempCanvas.width > 0 && tempCanvas.height > 0) {
                             ctx.drawImage(tempCanvas, 0, 0);
 
                             // Restore context properties
