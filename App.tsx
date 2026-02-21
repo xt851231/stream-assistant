@@ -8,7 +8,7 @@ import Stage from './components/Stage';
 import Toolbelt from './components/Toolbelt';
 import ChatSidebar from './components/ChatSidebar';
 import { useLiveAPI } from './hooks/useLiveAPI';
-import { Swords, Zap, Settings, Video, Mic, Monitor, MessageSquare, Smartphone } from 'lucide-react';
+import { Swords, Zap, Settings, Video, MessageSquare, Smartphone } from 'lucide-react';
 import { getBgColor } from './lib/utils/style-utils';
 
 const App: React.FC = () => {
@@ -404,27 +404,6 @@ const App: React.FC = () => {
                                         <Video size={18} className={isMediaOpen ? 'text-black' : 'text-white'} />
                                     </button>
                                     <button
-                                        onClick={() => toggleAudio(!audioStreaming, 'default', config)}
-                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${audioStreaming ? 'bg-[#ffd700] border-white' : 'bg-blue-900'}`}
-                                        title={audioStreaming ? "Microphone On" : "Microphone Off"}
-                                    >
-                                        <Mic size={20} className={audioStreaming ? "text-gray-900" : "text-gray-300 drop-shadow-md group-hover:text-white"} />
-                                    </button>
-                                    <button
-                                        onClick={() => toggleVideo(!videoStream)}
-                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${!!videoStream ? 'bg-[#ffd700] border-white' : 'bg-blue-900'} ${isPortrait ? 'hidden' : ''}`}
-                                        title={!!videoStream ? "Camera On" : "Camera Off"}
-                                    >
-                                        <Video size={20} className={!!videoStream ? "text-gray-900" : "text-gray-300 drop-shadow-md group-hover:text-white"} />
-                                    </button>
-                                    <button
-                                        onClick={() => toggleScreen(!screenSharing, config, mediaConfig.screenAudio)}
-                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${screenSharing ? 'bg-[#ffd700] border-white' : 'bg-blue-900'} ${isPortrait ? 'hidden' : ''}`}
-                                        title={screenSharing ? "Screen Share On" : "Screen Share Off"}
-                                    >
-                                        <Monitor size={20} className={screenSharing ? "text-gray-900" : "text-gray-300 drop-shadow-md group-hover:text-white"} />
-                                    </button>
-                                    <button
                                         onClick={() => setIsChatOpen(!isChatOpen)}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isChatOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
                                             }`}
@@ -469,7 +448,8 @@ const App: React.FC = () => {
                                     brushSize={brushSize}
                                     setBrushSize={setBrushSize}
                                     onClear={triggerClearStage}
-                                    themeConfig={themeConfig} // Pass theme config to Toolbelt if needed, or wrap it
+                                    themeConfig={themeConfig}
+                                    isPortrait={isPortrait}
                                 />
                             </div>
                         </div>
