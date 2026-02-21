@@ -71,7 +71,7 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
                         tempCanvas.width = canvas.width;
                         tempCanvas.height = canvas.height;
                         const tempCtx = tempCanvas.getContext('2d');
-                        if (tempCtx) {
+                        if (tempCtx && canvas.width > 0 && canvas.height > 0) {
                             tempCtx.drawImage(canvas, 0, 0);
                         }
 
