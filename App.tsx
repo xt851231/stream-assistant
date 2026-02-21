@@ -420,6 +420,9 @@ const App: React.FC = () => {
                                         onConfigChange={handleMediaConfigChange}
                                         onClose={() => setIsMediaOpen(false)}
                                         themeConfig={themeConfig}
+                                        onToggleAudio={(enabled) => toggleAudio(enabled, 'default', config)}
+                                        onToggleVideo={(enabled) => toggleVideo(enabled)}
+                                        onToggleScreen={(enabled) => toggleScreen(enabled, config, mediaConfig.screenAudio)}
                                     />
                                 </div>
                             </nav>

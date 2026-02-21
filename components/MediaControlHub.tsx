@@ -10,6 +10,9 @@ interface MediaControlHubProps {
     onConfigChange: (newConfig: MediaConfig) => void;
     onClose: () => void;
     themeConfig?: ThemeConfig;
+    onToggleAudio?: (enabled: boolean) => void;
+    onToggleVideo?: (enabled: boolean) => void;
+    onToggleScreen?: (enabled: boolean) => void;
 }
 
 interface DeviceInfo {
@@ -17,7 +20,7 @@ interface DeviceInfo {
     label: string;
 }
 
-const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onConfigChange, onClose, themeConfig }) => {
+const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onConfigChange, onClose, themeConfig, onToggleAudio, onToggleVideo, onToggleScreen }) => {
     const [microphones, setMicrophones] = useState<DeviceInfo[]>([]);
     const [cameras, setCameras] = useState<DeviceInfo[]>([]);
     const panelRef = useRef<HTMLElement>(null);
@@ -173,7 +176,10 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                 {/* Toggles */}
                 <div className="grid grid-cols-3 gap-2">
                     <button
-                        onClick={() => handleChange('audioEnabled', !config.audioEnabled)}
+                        onClick={() => {
+                            handleChange('audioEnabled', !config.audioEnabled);
+                            onToggleAudio?.(!config.audioEnabled);
+                        }}
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.audioEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title="Toggle Microphone"
@@ -182,7 +188,10 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         <span className="text-[9px] mt-1 font-bold">MIC</span>
                     </button>
                     <button
-                        onClick={() => handleChange('videoEnabled', !config.videoEnabled)}
+                        onClick={() => {
+                            handleChange('videoEnabled', !config.videoEnabled);
+                            onToggleVideo?.(!config.videoEnabled);
+                        }}
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.videoEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title="Toggle Camera"
@@ -191,7 +200,10 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         <span className="text-[9px] mt-1 font-bold">CAM</span>
                     </button>
                     <button
-                        onClick={() => handleChange('screenShareEnabled', !config.screenShareEnabled)}
+                        onClick={() => {
+                            handleChange('screenShareEnabled', !config.screenShareEnabled);
+                            onToggleScreen?.(!config.screenShareEnabled);
+                        }}
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.screenShareEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title="Toggle Screen Share"
