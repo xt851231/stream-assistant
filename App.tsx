@@ -165,6 +165,8 @@ const App: React.FC = () => {
     const [brushSize, setBrushSize] = useState(4);
 
     const settingsButtonRef = React.useRef<HTMLButtonElement>(null);
+    const mediaButtonRef = React.useRef<HTMLButtonElement>(null);
+    const appContainerRef = React.useRef<HTMLDivElement>(null);
 
     // Handlers
     const handleConnect = async () => {
@@ -276,7 +278,7 @@ const App: React.FC = () => {
                     backgroundSize: '100% 4px, 6px 100%'
                 }}
             />
-            <div data-component="App" className={`w-full flex flex-col border-4 border-[#1e293b] relative shadow-2xl overflow-hidden shrink-0 transition-all duration-500 max-h-[96vh] ${isPortrait ? 'aspect-[9/16] max-w-[54vh]' : 'aspect-video max-w-[177.78vh]'}`}
+            <div ref={appContainerRef} data-component="App" className={`w-full flex flex-col border-4 border-[#1e293b] relative shadow-2xl overflow-hidden shrink-0 transition-all duration-500 max-h-[96vh] ${isPortrait ? 'aspect-[9/16] max-w-[54vh]' : 'aspect-video max-w-[177.78vh]'}`}
                 style={{ backgroundColor: themeConfig.backgroundImage ? 'transparent' : '#111722' }}
             >
 
@@ -397,6 +399,7 @@ const App: React.FC = () => {
                                         <Settings size={18} className={isConfigOpen ? 'text-black' : 'text-white'} />
                                     </button>
                                     <button
+                                        ref={mediaButtonRef}
                                         onClick={() => { setIsMediaOpen(!isMediaOpen); setIsConfigOpen(false); }}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isMediaOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
                                             }`}
@@ -421,8 +424,11 @@ const App: React.FC = () => {
                                         onClose={() => setIsMediaOpen(false)}
                                         themeConfig={themeConfig}
                                         onToggleAudio={(enabled) => toggleAudio(enabled, 'default', config)}
-                                        onToggleVideo={(enabled) => toggleVideo(enabled)}
+                                        onToggleVideo={(enabled) => toggleVideo(enabled, 'default', config)}
                                         onToggleScreen={(enabled) => toggleScreen(enabled, config, mediaConfig.screenAudio)}
+                                        isPortrait={isPortrait}
+                                        containerRef={appContainerRef}
+                                        triggerRef={mediaButtonRef}
                                     />
                                 </div>
                             </nav>
@@ -492,6 +498,8 @@ const App: React.FC = () => {
                 onThemeConfigChange={setThemeConfig}
                 onClose={() => setIsConfigOpen(false)}
                 triggerRef={settingsButtonRef}
+                isPortrait={isPortrait}
+                containerRef={appContainerRef}
             />
         </div>
     );

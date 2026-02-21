@@ -46,6 +46,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const audioStreamerRef = useRef<any>(null);
     const videoStreamerRef = useRef<any>(null);
     const screenCaptureRef = useRef<any>(null);
+    const screenSharingRef = useRef<boolean>(false);
     const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const audioPlayerRef = useRef<any>(null);
     const activeToolsMapRef = useRef<Record<string, any>>({});
@@ -299,6 +300,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         audioStreamerRef.current = null;
         videoStreamerRef.current = null;
         screenCaptureRef.current = null;
+        screenSharingRef.current = false;
         setAudioStreaming(false);
         setVideoStreaming(false);
         setScreenSharing(false);
@@ -360,13 +362,14 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                     }
 
                     if (config.enableVAD) {
+                        const isScreenActive = screenSharingRef.current;
                         if (videoStreamerRef.current) {
                             // Only transmit camera frames if it's the main view (screenSharing is false)
-                            videoStreamerRef.current.transmitFrames = isSpeaking && !screenSharing;
+                            videoStreamerRef.current.transmitFrames = isSpeaking && !isScreenActive;
                         }
                         if (screenCaptureRef.current) {
                             // Only transmit screen frames if screen sharing is active
-                            screenCaptureRef.current.transmitFrames = isSpeaking && screenSharing;
+                            screenCaptureRef.current.transmitFrames = isSpeaking && isScreenActive;
                         }
                     }
                 };
@@ -389,111 +392,124 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
 
     const toggleVideo = async (enabled: boolean, camId: string, config: AppConfig) => {
-        if (enabled) {
-            if (!videoStreamerRef.current && clientRef.current) {
-                videoStreamerRef.current = new VideoStreamer(clientRef.current);
-            } else if (videoStreamerRef.current && clientRef.current) {
-                // Ensure client reference is current (may have changed after reconnect)
-                videoStreamerRef.current.setClient(clientRef.current);
-            }
-            if (videoStreamerRef.current) {
-                const video = await videoStreamerRef.current.start({
-                    deviceId: camId === 'default' ? undefined : camId
-                });
-
-                // Apply overlay if available
-                if (overlayCanvasRef.current && videoStreamerRef.current) {
-                    videoStreamerRef.current.setOverlayCanvas(overlayCanvasRef.current);
+        try {
+            if (enabled) {
+                if (!videoStreamerRef.current && clientRef.current) {
+                    videoStreamerRef.current = new VideoStreamer(clientRef.current);
+                } else if (videoStreamerRef.current && clientRef.current) {
+                    // Ensure client reference is current (may have changed after reconnect)
+                    videoStreamerRef.current.setClient(clientRef.current);
                 }
-
-                // Configure Video Transmission Strategy
                 if (videoStreamerRef.current) {
-                    // Only always-transmit if VAD disabled AND it's the main view
-                    videoStreamerRef.current.alwaysTransmit = !config.enableVAD && !screenSharing;
-                    if (config.enableVAD) {
-                        // Immediately sync with current VAD speaking state
-                        videoStreamerRef.current.transmitFrames = isSpeakingRef.current && !screenSharing;
+                    const video = await videoStreamerRef.current.start({
+                        deviceId: camId === 'default' ? undefined : camId
+                    });
+
+                    // Apply overlay if available
+                    if (overlayCanvasRef.current && videoStreamerRef.current) {
+                        videoStreamerRef.current.setOverlayCanvas(overlayCanvasRef.current);
                     }
-                }
 
-                setCameraStream(video.srcObject);
+                    // Configure Video Transmission Strategy
+                    if (videoStreamerRef.current) {
+                        // Only always-transmit if VAD disabled AND it's the main view
+                        videoStreamerRef.current.alwaysTransmit = !config.enableVAD && !screenSharingRef.current;
+                        if (config.enableVAD) {
+                            // Immediately sync with current VAD speaking state
+                            videoStreamerRef.current.transmitFrames = isSpeakingRef.current && !screenSharingRef.current;
+                        }
+                    }
 
-                // If screen sharing is NOT active, update the main video stream
-                // If screen sharing IS active, we start the camera in background but don't show it 
-                // (except maybe in a PiP which is handled by UI, but here 'videoStream' implies the main view)
-                if (!screenSharing) {
-                    setVideoStream(video.srcObject);
+                    setCameraStream(video.srcObject);
+
+                    // If screen sharing is NOT active, update the main video stream
+                    // If screen sharing IS active, we start the camera in background but don't show it 
+                    // (except maybe in a PiP which is handled by UI, but here 'videoStream' implies the main view)
+                    if (!screenSharingRef.current) {
+                        setVideoStream(video.srcObject);
+                    }
+                    setVideoStreaming(true);
                 }
-                setVideoStreaming(true);
+            } else {
+                if (videoStreamerRef.current) await videoStreamerRef.current.stop();
+                setVideoStreaming(false);
+                setCameraStream(null);
+                if (!screenSharingRef.current) setVideoStream(null);
             }
-        } else {
-            if (videoStreamerRef.current) await videoStreamerRef.current.stop();
+        } catch (error) {
+            console.error("Error toggling video:", error);
             setVideoStreaming(false);
-            setCameraStream(null);
-            if (!screenSharing) setVideoStream(null);
         }
     };
 
     const toggleScreen = async (enabled: boolean, config: AppConfig, screenAudio?: boolean) => {
-        if (enabled) {
-            if (!screenCaptureRef.current && clientRef.current) {
-                screenCaptureRef.current = new ScreenCapture(clientRef.current);
-            } else if (screenCaptureRef.current && clientRef.current) {
-                // Ensure client reference is current (may have changed after reconnect)
-                screenCaptureRef.current.setClient(clientRef.current);
-            }
-            if (screenCaptureRef.current) {
-                const video = await screenCaptureRef.current.start({
-                    audio: screenAudio
-                });
-                setScreenSharing(true);
-
-                // Apply overlay if available
-                if (overlayCanvasRef.current && screenCaptureRef.current) {
-                    screenCaptureRef.current.setOverlayCanvas(overlayCanvasRef.current);
+        try {
+            if (enabled) {
+                if (!screenCaptureRef.current && clientRef.current) {
+                    screenCaptureRef.current = new ScreenCapture(clientRef.current);
+                } else if (screenCaptureRef.current && clientRef.current) {
+                    // Ensure client reference is current (may have changed after reconnect)
+                    screenCaptureRef.current.setClient(clientRef.current);
                 }
-
-                // Configure Screen Transmission Strategy
                 if (screenCaptureRef.current) {
-                    // Screen takes priority if active
-                    screenCaptureRef.current.alwaysTransmit = !config.enableVAD;
-                    if (config.enableVAD) {
-                        // Immediately sync with current VAD speaking state
-                        screenCaptureRef.current.transmitFrames = isSpeakingRef.current;
+                    const video = await screenCaptureRef.current.start({
+                        audio: screenAudio
+                    });
+                    screenSharingRef.current = true;
+                    setScreenSharing(true);
+
+                    // Apply overlay if available
+                    if (overlayCanvasRef.current && screenCaptureRef.current) {
+                        screenCaptureRef.current.setOverlayCanvas(overlayCanvasRef.current);
                     }
-                }
 
-                // Turn OFF camera transmission since screen is now active
-                if (videoStreamerRef.current) {
-                    videoStreamerRef.current.alwaysTransmit = false;
-                    videoStreamerRef.current.transmitFrames = false;
-                }
+                    // Configure Screen Transmission Strategy
+                    if (screenCaptureRef.current) {
+                        // Screen takes priority if active
+                        screenCaptureRef.current.alwaysTransmit = !config.enableVAD;
+                        if (config.enableVAD) {
+                            // Immediately sync with current VAD speaking state
+                            screenCaptureRef.current.transmitFrames = isSpeakingRef.current;
+                        }
+                    }
 
-                // If Camera was already streaming, we move it to background (in UI)
-                // We update main videoStream to be the screen share
-                setVideoStream(video.srcObject);
-            }
-        } else {
-            if (screenCaptureRef.current) await screenCaptureRef.current.stop();
-            setScreenSharing(false);
+                    // Turn OFF camera transmission since screen is now active
+                    if (videoStreamerRef.current) {
+                        videoStreamerRef.current.alwaysTransmit = false;
+                        videoStreamerRef.current.transmitFrames = false;
+                    }
 
-            // Revert to camera if active
-            if (videoStreaming && videoStreamerRef.current) {
-                // Restore camera transmission
-                videoStreamerRef.current.alwaysTransmit = !config.enableVAD;
-                videoStreamerRef.current.transmitFrames = config.enableVAD ? isSpeakingRef.current : false;
-
-                // Check if the video streamer still has an active stream
-                const cameraVideo = videoStreamerRef.current.getVideoElement();
-                if (cameraVideo && cameraVideo.srcObject) {
-                    setVideoStream(cameraVideo.srcObject);
-                } else {
-                    // Should potentially restart or handle error, but usually it stays active
-                    setVideoStream(null);
+                    // If Camera was already streaming, we move it to background (in UI)
+                    // We update main videoStream to be the screen share
+                    setVideoStream(video.srcObject);
                 }
             } else {
-                setVideoStream(null);
+                if (screenCaptureRef.current) await screenCaptureRef.current.stop();
+                screenSharingRef.current = false;
+                setScreenSharing(false);
+
+                // Revert to camera if active
+                if (videoStreaming && videoStreamerRef.current) {
+                    // Restore camera transmission
+                    videoStreamerRef.current.alwaysTransmit = !config.enableVAD;
+                    videoStreamerRef.current.transmitFrames = config.enableVAD ? isSpeakingRef.current : false;
+
+                    // Check if the video streamer still has an active stream
+                    const cameraVideo = videoStreamerRef.current.getVideoElement();
+                    if (cameraVideo && cameraVideo.srcObject) {
+                        setVideoStream(cameraVideo.srcObject);
+                    } else {
+                        // Should potentially restart or handle error, but usually it stays active
+                        setVideoStream(null);
+                    }
+                } else {
+                    setVideoStream(null);
+                }
             }
+        } catch (error) {
+            console.error("Error toggling screen share:", error);
+            screenSharingRef.current = false;
+            setScreenSharing(false);
         }
     };
 

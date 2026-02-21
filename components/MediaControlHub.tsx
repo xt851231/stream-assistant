@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { MediaConfig, ThemeConfig } from '../types';
 import { Mic, Video, Monitor, Volume2, Settings2, Gamepad2 } from 'lucide-react';
 import { SpeechAudioContext } from '../lib/utils/SpeechAudioContext';
@@ -13,6 +14,9 @@ interface MediaControlHubProps {
     onToggleAudio?: (enabled: boolean) => void;
     onToggleVideo?: (enabled: boolean) => void;
     onToggleScreen?: (enabled: boolean) => void;
+    isPortrait?: boolean;
+    containerRef?: React.RefObject<HTMLDivElement>;
+    triggerRef?: React.RefObject<HTMLButtonElement>;
 }
 
 interface DeviceInfo {
@@ -20,10 +24,11 @@ interface DeviceInfo {
     label: string;
 }
 
-const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onConfigChange, onClose, themeConfig, onToggleAudio, onToggleVideo, onToggleScreen }) => {
+const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onConfigChange, onClose, themeConfig, onToggleAudio, onToggleVideo, onToggleScreen, isPortrait, containerRef, triggerRef }) => {
     const [microphones, setMicrophones] = useState<DeviceInfo[]>([]);
     const [cameras, setCameras] = useState<DeviceInfo[]>([]);
     const panelRef = useRef<HTMLElement>(null);
+    const [portraitPosition, setPortraitPosition] = useState({ top: 0, left: 0, width: 300 });
 
     // Sync volumes to SpeechAudioContext
     useEffect(() => {
@@ -31,16 +36,37 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
         SpeechAudioContext.setSystemVolume(config.systemVolume);
     }, [config.aiVolume, config.systemVolume]);
 
+    // Compute position for portrait mode portal
+    useLayoutEffect(() => {
+        if (!isOpen || !isPortrait || !containerRef?.current) return;
+
+        const updatePosition = () => {
+            const containerRect = containerRef.current!.getBoundingClientRect();
+            const triggerRect = triggerRef?.current?.getBoundingClientRect();
+            setPortraitPosition({
+                top: triggerRect ? triggerRect.bottom + 8 : containerRect.top + 60,
+                left: containerRect.left + 8,
+                width: containerRect.width - 16,
+            });
+        };
+
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
+    }, [isOpen, isPortrait, containerRef, triggerRef]);
+
     // Enumerate real devices when the menu opens
     useEffect(() => {
         if (!isOpen) return;
 
         const enumerateDevices = async () => {
             try {
-                // Request permission first (needed to get labels)
-                // If permission was already granted, this resolves instantly
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true }).catch(() => null);
-
                 const devices = await navigator.mediaDevices.enumerateDevices();
 
                 const mics = devices
@@ -60,7 +86,6 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                 setMicrophones(mics);
                 setCameras(cams);
 
-                // Release the permission stream
                 if (stream) {
                     stream.getTracks().forEach(t => t.stop());
                 }
@@ -70,8 +95,6 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
         };
 
         enumerateDevices();
-
-        // Listen for device changes (plug/unplug)
         navigator.mediaDevices.addEventListener('devicechange', enumerateDevices);
         return () => {
             navigator.mediaDevices.removeEventListener('devicechange', enumerateDevices);
@@ -83,12 +106,13 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
         if (!isOpen) return;
 
         const handleClickOutside = (e: MouseEvent) => {
-            if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+            const target = e.target as Node;
+            if (panelRef.current && !panelRef.current.contains(target) &&
+                triggerRef?.current && !triggerRef.current.contains(target)) {
                 onClose();
             }
         };
 
-        // Use setTimeout to avoid closing immediately from the same click that opened it
         const timer = setTimeout(() => {
             document.addEventListener('mousedown', handleClickOutside);
         }, 0);
@@ -97,7 +121,7 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
             clearTimeout(timer);
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, triggerRef]);
 
     if (!isOpen) return null;
 
@@ -105,13 +129,21 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
         onConfigChange({ ...config, [key]: value });
     };
 
-    return (
+    const menuContent = (
         <aside
             ref={panelRef}
             aria-label="Media Controls"
             role="dialog"
             data-component="MediaControlHub"
-            className="absolute top-14 right-20 z-50 w-[300px] rpg-window shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200"
+            className={isPortrait
+                ? 'fixed z-[9999] rpg-window shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 max-h-[60vh] overflow-y-auto'
+                : 'absolute top-14 right-20 z-50 w-[300px] rpg-window shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200'
+            }
+            style={isPortrait ? {
+                top: portraitPosition.top,
+                left: portraitPosition.left,
+                width: portraitPosition.width,
+            } : undefined}
         >
             <header className="bg-blue-900 border-b-2 border-white p-2 flex items-center gap-2">
                 <Settings2 className="text-[#ffd700]" size={16} />
@@ -268,6 +300,13 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
             </div>
         </aside>
     );
+
+    // In portrait mode, portal to body to escape overflow-hidden clipping
+    if (isPortrait) {
+        return createPortal(menuContent, document.body);
+    }
+
+    return menuContent;
 };
 
 export default MediaControlHub;

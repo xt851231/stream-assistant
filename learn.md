@@ -1,5 +1,39 @@
 # Learnings
 
+## [2026-02-21 21:05] Fixed Missing Config & Uncaught Permission Errors
+
+**The Problem:**
+1. The LLM could not see the camera video (or drawings) because `toggleVideo` was throwing `TypeError: Cannot read properties of undefined (reading 'enableVAD')`. This aborted the stream setup before `alwaysTransmit` or `transmitFrames` could be enabled, meaning zero frames were ever sent to the LLM.
+2. Clicking "Cancel" when asked for screen share or camera permissions resulted in an `Uncaught (in promise) NotAllowedError` because the `start` promises in `LiveAPIContext.tsx` were unhandled.
+
+**Root Cause:**
+1. In `App.tsx`, `MediaControlHub` invoked `toggleVideo(enabled)` without passing the required `camId` and `config` parameters, leaving `config` as `undefined`.
+2. The `toggleAudio`, `toggleVideo`, and `toggleScreen` functions in `LiveAPIContext.tsx` lacked `try/catch` blocks around the asynchronous `start` calls.
+
+**The Solution:**
+1. Updated `App.tsx` to correctly pass `toggleVideo(enabled, 'default', config)`.
+2. Wrapped the inner logic of `toggleAudio`, `toggleVideo`, and `toggleScreen` with `try/catch` blocks in `LiveAPIContext.tsx` to log errors gracefully and ensure context state reverts locally if start fail.
+
+**Key Changes:**
+- `App.tsx`: Fixed `onToggleVideo` prop.
+- `contexts/LiveAPIContext.tsx`: Added `try/catch` handling for media toggles.
+## [2026-02-21 20:48] Fixed Stale Closure: Camera Frames Sent Instead of Screen Share
+
+**The Problem:**
+When both screen share and camera were active with Client-Side VAD enabled (Live API mode), the LLM received camera frames instead of screen share frames during speech.
+
+**Root Cause:**
+The `onSpeechStatusChange` callback in `toggleAudio` captured the `screenSharing` React state variable in its closure. If audio was enabled first (when `screenSharing = false`), then screen share was enabled later, the callback still saw the stale `screenSharing = false`. This caused `videoStreamerRef.transmitFrames = isSpeaking && !false` (camera ON) and `screenCaptureRef.transmitFrames = isSpeaking && false` (screen OFF). Additionally, `setLatestImage()` in `BaseVideoCapture` was called unconditionally for both streams, so the camera's frame would overwrite the screen's frame even when the camera shouldn't be transmitting.
+
+**The Solution:**
+1. Added `screenSharingRef` (a React ref) that mirrors the `screenSharing` state but is always current. The `onSpeechStatusChange` callback now reads `screenSharingRef.current` instead of the closure-captured state.
+2. Gated `setLatestImage()` behind the same `alwaysTransmit || transmitFrames` check as `sendImage()`, so only the active source's frame is stored.
+3. Reset `screenSharingRef.current = false` in `cleanupMedia()`.
+
+**Key Changes:**
+- `contexts/LiveAPIContext.tsx`: Added `screenSharingRef`, updated VAD callback to use it, synced ref in `toggleScreen` and `cleanupMedia`.
+- `lib/utils/media-utils.js`: Moved `setLatestImage()` inside the `alwaysTransmit || transmitFrames` guard.
+
 ## [2026-02-21 14:20] Per-Model Config Storage with Per-Model Persona Voice Defaults
 
 **The Problem:**

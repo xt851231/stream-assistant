@@ -14,14 +14,16 @@ interface ConfigurationMenuProps {
     onThemeConfigChange?: (newConfig: ThemeConfig) => void;
     onClose: () => void;
     triggerRef?: React.RefObject<HTMLButtonElement>;
+    isPortrait?: boolean;
+    containerRef?: React.RefObject<HTMLDivElement>;
 }
 
-const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, onConfigChange, themeConfig, onThemeConfigChange, onClose, triggerRef }) => {
+const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, onConfigChange, themeConfig, onThemeConfigChange, onClose, triggerRef, isPortrait, containerRef }) => {
     const currentModelId = config.provider && MODEL_REGISTRY[config.provider] ? config.provider : 'gemini-live';
     const currentModel = MODEL_REGISTRY[currentModelId];
 
     const [activeTab, setActiveTab] = useState<string>(currentModel.uiGroups[0]?.id || 'system');
-    const [position, setPosition] = useState({ top: 0, right: 0 });
+    const [position, setPosition] = useState({ top: 0, right: 0, left: 0, width: 0 });
     const panelRef = useRef<HTMLElement>(null);
     const [browserVoices, setBrowserVoices] = useState<SpeechSynthesisVoice[]>([]);
 
@@ -46,10 +48,22 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
         if (isOpen && triggerRef?.current) {
             const updatePosition = () => {
                 const rect = triggerRef.current!.getBoundingClientRect();
-                setPosition({
-                    top: rect.bottom + 8,
-                    right: window.innerWidth - rect.right
-                });
+                if (isPortrait && containerRef?.current) {
+                    const containerRect = containerRef.current.getBoundingClientRect();
+                    setPosition({
+                        top: rect.bottom + 8,
+                        right: 0,
+                        left: containerRect.left + 8,
+                        width: containerRect.width - 16,
+                    });
+                } else {
+                    setPosition({
+                        top: rect.bottom + 8,
+                        right: window.innerWidth - rect.right,
+                        left: 0,
+                        width: 0,
+                    });
+                }
             };
 
             updatePosition();
@@ -61,7 +75,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                 window.removeEventListener('scroll', updatePosition, true);
             };
         }
-    }, [isOpen, triggerRef]);
+    }, [isOpen, triggerRef, isPortrait, containerRef]);
 
     // Click outside to close
     useEffect(() => {
@@ -272,10 +286,10 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
             aria-label="Configuration Menu"
             role="dialog"
             data-component="ConfigurationMenu"
-            className="fixed z-[9999] w-[480px] rpg-window shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200"
+            className={`fixed z-[9999] rpg-window shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 ${isPortrait ? '' : 'w-[480px]'}`}
             style={{
                 top: position.top,
-                right: position.right,
+                ...(isPortrait ? { left: position.left, width: position.width } : { right: position.right }),
                 backgroundColor: getBgColor('#0a0f16', themeConfig?.opacity?.configurationMenu ?? 0.95),
                 backdropFilter: themeConfig?.backgroundImage ? `blur(${(themeConfig?.blur ?? 0) / 2}px)` : 'none'
             }}
@@ -296,7 +310,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                 ))}
             </nav>
 
-            <div className="p-4 bg-[#0a0f16] max-h-[60vh] overflow-y-auto">
+            <div className={`p-4 bg-[#0a0f16] overflow-y-auto ${isPortrait ? 'max-h-[40vh]' : 'max-h-[60vh]'}`}>
                 {activeTab !== 'appearance' && (
                     <div className="space-y-6">
                         {/* Global Provider Select - Visible on 'system' or first tab */}
