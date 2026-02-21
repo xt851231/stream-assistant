@@ -361,7 +361,7 @@ const App: React.FC = () => {
                                 className="flex justify-between items-center mb-4 shrink-0 p-2 rounded-lg transition-colors duration-300"
                                 style={{ backgroundColor: getBgColor('#000000', themeConfig.opacity.toolbar * 0.5) }}
                             >
-                                <div className="relative px-4 py-2 min-w-[280px]">
+                                <div className={`relative px-4 py-2 min-w-[280px] ${isPortrait ? 'hidden' : ''}`}>
                                     <div className="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-blue-800/50 to-transparent border-l-4 border-[#ffd700] transform skew-x-[-12deg] rounded-r-lg"></div>
                                     <div className="relative flex items-center gap-3">
                                         <span className="material-symbols-outlined text-[#ffd700] text-2xl">
