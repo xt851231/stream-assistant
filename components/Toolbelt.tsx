@@ -15,6 +15,13 @@ interface ToolbeltProps {
 }
 
 const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#ffd700', '#ffffff'];
+const COLOR_NAMES: Record<string, string> = {
+    '#ef4444': 'Red',
+    '#3b82f6': 'Blue',
+    '#22c55e': 'Green',
+    '#ffd700': 'Gold',
+    '#ffffff': 'White'
+};
 const SIZES = [2, 4, 8, 12];
 
 const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, brushSize, setBrushSize, onClear, themeConfig }) => {
@@ -33,12 +40,16 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
             <div className="flex gap-2 mr-6 border-r-2 border-gray-600 pr-6 items-center shrink-0">
                 <button
                     onClick={() => setTool('pen')}
+                    aria-label="Pen Tool"
+                    title="Pen Tool"
                     className={`group relative size-8 rounded flex items-center justify-center transition-transform hover:scale-105 ${tool === 'pen' ? 'bg-[#2b6cee] border-2 border-[#ffd700]' : 'bg-[#1e293b] border-2 border-gray-600'}`}
                 >
                     <Pen size={14} className={tool === 'pen' ? 'text-white' : 'text-gray-400'} />
                 </button>
                 <button
                     onClick={() => setTool('eraser')}
+                    aria-label="Eraser Tool"
+                    title="Eraser Tool"
                     className={`group relative size-8 rounded flex items-center justify-center transition-transform hover:scale-105 ${tool === 'eraser' ? 'bg-[#2b6cee] border-2 border-[#ffd700]' : 'bg-[#1e293b] border-2 border-gray-600'}`}
                 >
                     <Eraser size={14} className={tool === 'eraser' ? 'text-white' : 'text-gray-400'} />
@@ -46,6 +57,7 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
                 <button
                     onClick={onClear}
                     className="group relative size-8 bg-[#1e293b] border-2 border-gray-600 hover:border-red-500 rounded flex items-center justify-center hover:scale-105 transition-transform"
+                    aria-label="Clear Canvas"
                     title="Clear Canvas"
                 >
                     <Trash2 size={14} className="text-gray-400 group-hover:text-red-500" />
@@ -58,6 +70,8 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
                     <button
                         key={size}
                         onClick={() => setBrushSize(size)}
+                        aria-label={`Brush Size ${size}px`}
+                        title={`Brush Size ${size}px`}
                         className={`rounded-full bg-gray-400 hover:bg-white transition-all ${brushSize === size ? 'bg-white ring-2 ring-[#ffd700]' : ''}`}
                         style={{ width: Math.max(8, size * 1.5), height: Math.max(8, size * 1.5) }}
                     />
@@ -70,6 +84,8 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
                     <button
                         key={c}
                         onClick={() => { setColor(c); setTool('pen'); }}
+                        aria-label={`Select Color ${COLOR_NAMES[c] || c}`}
+                        title={`Select Color ${COLOR_NAMES[c] || c}`}
                         className={`size-6 rounded-full border-2 transition-transform hover:scale-110 shadow-sm ${color === c ? 'border-white scale-110 ring-2 ring-gray-400' : 'border-gray-600'}`}
                         style={{ backgroundColor: c }}
                     />

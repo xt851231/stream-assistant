@@ -1,0 +1,3 @@
+## 2026-02-21 - [Icon-Only Button Accessibility]
+**Learning:** Many interactive elements in the application (like tool selection, brush sizes, and color palettes) were implemented as icon-only buttons or divs without accessible names. This makes them unusable for screen reader users and less discoverable for sighted users (lack of tooltips).
+**Action:** When creating or modifying UI components with icon-only buttons, always include `aria-label` for screen readers and `title` for mouse users. Use a lookup map for values like colors or sizes to provide human-readable descriptions (e.g., "Red" instead of hex code).
