@@ -1,7 +1,7 @@
 import React, { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AppConfig, ThemeConfig } from '../types';
-import { MODEL_REGISTRY, PROVIDERS, FIELD_DEFINITIONS, PERSONAS, VOICES, getEffectiveSettings, getStorageKey } from '../utils/model-registry';
+import { MODEL_REGISTRY, PROVIDERS, FIELD_DEFINITIONS, PERSONAS, VOICES, getEffectiveSettings, getStorageKey, saveConfig, loadConfig } from '../utils/model-registry';
 import { Cpu, Activity, Save, Image, Settings, Sparkles, Brain, Mic } from 'lucide-react';
 import { getBgColor } from '../lib/utils/style-utils';
 
@@ -89,11 +89,13 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
     const handleChange = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => {
         const newConfig = { ...config, [key]: value };
 
-        // Critical: If the user just changed their persona, the new storage key needs to use the NEW persona ID
-        const activePersonaId = key === 'selectedPersonaId' ? value as string : newConfig.selectedPersonaId;
-        const storageKey = getStorageKey(currentModelId, activePersonaId);
+        // If persona changed, update the key for model-specific storage
+        if (key === 'selectedPersonaId') {
+            newConfig.selectedPersonaId = value as string;
+        }
 
-        localStorage.setItem(storageKey, JSON.stringify(newConfig));
+        // Save using split storage (common + model-specific)
+        saveConfig(newConfig);
         onConfigChange(newConfig);
     };
 
@@ -101,25 +103,29 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
         const persona = PERSONAS.find(p => p.id === personaId);
         if (!persona) return;
 
-        let nextConfig: AppConfig;
-        const storageKey = getStorageKey(currentModelId, persona.id);
-        const saved = localStorage.getItem(storageKey);
+        // Save current config before switching persona
+        saveConfig(config);
 
-        if (saved) {
-            // Load their whole saved preferences for this specific persona
-            nextConfig = JSON.parse(saved);
-        } else {
-            // Unseen persona for this model, create defaults
+        // Try to load saved config for this persona on the current model
+        let nextConfig = loadConfig(currentModelId, persona.id, config);
+
+        // If no model-specific save existed, seed with persona defaults
+        const modelKey = getStorageKey(currentModelId, persona.id);
+        if (!localStorage.getItem(modelKey)) {
             nextConfig = {
-                ...config,
+                ...nextConfig,
                 selectedPersonaId: persona.id,
                 systemInstructions: persona.systemInstruction,
                 voice: persona.voice,
-                ttsVoice: persona.voice // Bind custom TTS voice to persona by default
+                ttsVoice: persona.voice,
             };
         }
 
-        localStorage.setItem(storageKey, JSON.stringify(nextConfig));
+        // Ensure common fields are correct
+        nextConfig.selectedPersonaId = persona.id;
+        nextConfig.provider = currentModelId;
+
+        saveConfig(nextConfig);
         onConfigChange(nextConfig);
     };
 
@@ -127,50 +133,53 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
         if (newModelKey === currentModelId) return;
 
         // Save current state before leaving
-        const currentStorageKey = getStorageKey(currentModelId, config.selectedPersonaId);
-        localStorage.setItem(currentStorageKey, JSON.stringify(config));
+        saveConfig(config);
 
-        // Load targeted model with current persona (or default if persona never used on new model)
-        const nextStorageKey = getStorageKey(newModelKey, config.selectedPersonaId);
-        const saved = localStorage.getItem(nextStorageKey);
-        let nextConfig: AppConfig;
-
+        // Load targeted model with current persona
+        // Common fields (apiKey, selectedPersonaId) are loaded automatically by loadConfig
         const newModelDef = MODEL_REGISTRY[newModelKey];
+        const defaults: AppConfig = {
+            ...config,
+            provider: newModelKey,
+            modelId: newModelDef.modelId,
+        };
 
-        if (saved) {
-            nextConfig = JSON.parse(saved);
-        } else {
-            const defaults: any = {};
-            // Flatten sections if present, or use settings directly
+        let nextConfig = loadConfig(newModelKey, config.selectedPersonaId, defaults);
+
+        // If no saved config existed for this model+persona, build from field defaults
+        const modelKey = getStorageKey(newModelKey, config.selectedPersonaId);
+        if (!localStorage.getItem(modelKey)) {
+            const fieldDefaults: any = {};
             newModelDef.uiGroups.forEach((group: any) => {
                 if (group.sections) {
                     group.sections.forEach((section: any) => {
                         const effectiveSettings = getEffectiveSettings(newModelDef.requiresTTS ?? false, section.settings);
                         effectiveSettings.forEach((settingId: string) => {
-                            if (settingId !== 'persona' && FIELD_DEFINITIONS[settingId]) {
-                                defaults[settingId] = FIELD_DEFINITIONS[settingId].defaultValue;
+                            if (settingId !== 'persona' && FIELD_DEFINITIONS[settingId]?.defaultValue !== undefined) {
+                                fieldDefaults[settingId] = FIELD_DEFINITIONS[settingId].defaultValue;
                             }
                         });
                     });
                 } else if (group.settings) {
                     const effectiveSettings = getEffectiveSettings(newModelDef.requiresTTS ?? false, group.settings);
                     effectiveSettings.forEach((settingId: string) => {
-                        if (settingId !== 'persona' && FIELD_DEFINITIONS[settingId]) {
-                            defaults[settingId] = FIELD_DEFINITIONS[settingId].defaultValue;
+                        if (settingId !== 'persona' && FIELD_DEFINITIONS[settingId]?.defaultValue !== undefined) {
+                            fieldDefaults[settingId] = FIELD_DEFINITIONS[settingId].defaultValue;
                         }
                     });
                 }
             });
 
             nextConfig = {
-                ...config,
-                ...defaults,
+                ...nextConfig,
+                ...fieldDefaults,
                 provider: newModelKey,
                 modelId: newModelDef.modelId,
             };
         }
 
         nextConfig.provider = newModelKey;
+        saveConfig(nextConfig);
         onConfigChange(nextConfig);
     };
 

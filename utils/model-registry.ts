@@ -1,9 +1,80 @@
+import { AppConfig } from '../types';
 import { PERSONAS, VOICES } from '../constants';
 
 export { PERSONAS, VOICES };
 
+/**
+ * Fields that are shared across ALL models and persist when switching modes.
+ * Everything else is model+persona-specific and stored independently.
+ */
+export const COMMON_FIELDS: (keyof AppConfig)[] = ['apiKey', 'selectedPersonaId'];
+export const COMMON_STORAGE_KEY = 'app_common_config';
+
 export function getStorageKey(modelId: string, personaId: string): string {
     return `config_${modelId}_${personaId}`;
+}
+
+/** Extract only the common (cross-model) fields from a full config */
+export function extractCommonConfig(config: Partial<AppConfig>): Partial<AppConfig> {
+    const common: Partial<AppConfig> = {};
+    for (const field of COMMON_FIELDS) {
+        if ((config as any)[field] !== undefined) {
+            (common as any)[field] = (config as any)[field];
+        }
+    }
+    return common;
+}
+
+/** Extract model-specific fields (everything except common fields) */
+export function extractModelConfig(config: Partial<AppConfig>): Partial<AppConfig> {
+    const modelConfig = { ...config };
+    for (const field of COMMON_FIELDS) {
+        delete (modelConfig as any)[field];
+    }
+    return modelConfig;
+}
+
+/** Save a full config to localStorage as common + model-specific */
+export function saveConfig(config: AppConfig): void {
+    // Always save common fields
+    const common = extractCommonConfig(config);
+    localStorage.setItem(COMMON_STORAGE_KEY, JSON.stringify(common));
+
+    // Save model-specific fields under provider+persona key
+    const provider = config.provider || 'gemini-live';
+    const personaId = config.selectedPersonaId || 'felix';
+    const modelConfig = extractModelConfig(config);
+    localStorage.setItem(getStorageKey(provider, personaId), JSON.stringify(modelConfig));
+}
+
+/** Load a full config from localStorage by merging common + model-specific */
+export function loadConfig(provider: string, personaId: string, defaults: AppConfig): AppConfig {
+    let result = { ...defaults };
+
+    // Load common config first
+    try {
+        const savedCommon = localStorage.getItem(COMMON_STORAGE_KEY);
+        if (savedCommon) {
+            const parsed = JSON.parse(savedCommon);
+            result = { ...result, ...parsed };
+        }
+    } catch (e) { /* ignore parse errors */ }
+
+    // Load model-specific config
+    try {
+        const modelKey = getStorageKey(provider, personaId);
+        const savedModel = localStorage.getItem(modelKey);
+        if (savedModel) {
+            const parsed = JSON.parse(savedModel);
+            // Merge model-specific fields but preserve common fields from above
+            const common = extractCommonConfig(result);
+            result = { ...result, ...parsed, ...common };
+        }
+    } catch (e) { /* ignore parse errors */ }
+
+    // Ensure provider is set correctly
+    result.provider = provider;
+    return result;
 }
 
 export function getEffectiveSettings(requiresTTS: boolean, settings: string[]): string[] {

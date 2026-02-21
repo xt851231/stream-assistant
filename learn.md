@@ -1,5 +1,29 @@
 # Learnings
 
+## [2026-02-21 13:22] Cherry-Picked Accessibility, Security & Refactoring from Jules Branches
+
+**The Problem:**
+- All Toolbelt icon-only buttons (pen, eraser, clear, brush sizes, color swatches) lacked `aria-label` attributes, making them invisible to screen readers.
+- `GeminiLiveAdapter`, `GeminiFlashAdapter`, and `GeminiTTSAdapter` were logging actual user transcription text and response content to the browser console — a privacy concern.
+- `GeminiLiveAdapter.connect()` was a 100+ line monolithic method mixing config building, callbacks, and connection logic.
+
+**Root Cause:**
+- Accessibility labels were never added during initial development.
+- Debug logging from development was left active with sensitive content (user speech, AI responses).
+- The connect method grew organically without refactoring.
+
+**The Solution:**
+1. **Toolbelt A11y**: Added `aria-label` and `title` to all 6 button types. Created `COLOR_NAMES` map (`#ef4444` → `"Red"`) for human-readable color names.
+2. **Sensitive Log Removal**: Removed 4 `console.log` calls that logged transcription text from `GeminiLiveAdapter`. Removed transcript logging from `GeminiFlashAdapter`. Replaced `text.substring()` logging with `text.length` in `GeminiTTSAdapter`.
+3. **Connect Refactoring**: Extracted `_buildConnectConfig()` (config object) and `_getCallbacks()` (WebSocket handlers) from `connect()`. Also removed the noisy `'📨 RAW onmessage'` debug log.
+
+**Key Changes:**
+- `components/Toolbelt.tsx`: aria-label/title on all buttons, COLOR_NAMES map
+- `lib/api/adapters/GeminiLiveAdapter.js`: Removed sensitive logs, extracted `_buildConnectConfig()` and `_getCallbacks()`
+- `lib/api/adapters/GeminiFlashAdapter.js`: Removed transcript log, replaced substring log with length
+- `lib/api/tts/adapters/GeminiTTSAdapter.js`: Replaced substring logs with length
+- `tests/jules_branches_review.test.js`: 11 new tests
+
 ## [2026-02-21 11:12] Cherry-Picked Performance Optimizations from Jules Branch
 
 **The Problem:**

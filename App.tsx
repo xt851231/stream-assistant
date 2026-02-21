@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AppConfig, MediaConfig, ConnectionState, Message, ThemeConfig } from './types';
 import { DEFAULT_CONFIG, DEFAULT_MEDIA_CONFIG, INITIAL_MESSAGES, DEFAULT_THEME_CONFIG } from './constants';
-import { getStorageKey } from './utils/model-registry';
+import { getStorageKey, COMMON_STORAGE_KEY, loadConfig, saveConfig } from './utils/model-registry';
 import ConfigurationMenu from './components/ConfigurationMenu';
 import MediaControlHub from './components/MediaControlHub';
 import Stage from './components/Stage';
@@ -35,26 +35,31 @@ const App: React.FC = () => {
     // State
     const [config, setConfig] = useState<AppConfig>(() => {
         try {
-            // First find out what the last used model/persona was
-            const baseSavedConfig = localStorage.getItem('app_config');
-            let lastUsedConfig = { ...DEFAULT_CONFIG };
+            // Determine last used provider + persona from common config
+            const savedCommon = localStorage.getItem(COMMON_STORAGE_KEY);
+            let provider = DEFAULT_CONFIG.provider;
+            let personaId = DEFAULT_CONFIG.selectedPersonaId;
 
-            if (baseSavedConfig) {
-                const parsedBase = JSON.parse(baseSavedConfig);
-                lastUsedConfig = { ...lastUsedConfig, ...parsedBase };
+            if (savedCommon) {
+                const parsed = JSON.parse(savedCommon);
+                if (parsed.selectedPersonaId) personaId = parsed.selectedPersonaId;
             }
 
-            // Now try to load the specific saved state for that model + persona combo
-            const specificKey = getStorageKey(lastUsedConfig.provider, lastUsedConfig.selectedPersonaId);
-            const specificSavedConfig = localStorage.getItem(specificKey);
-
-            if (specificSavedConfig) {
-                const parsedSpecific = JSON.parse(specificSavedConfig);
-                return { ...lastUsedConfig, ...parsedSpecific };
+            // Also check legacy 'app_config' for the provider (backward compat)
+            const legacyConfig = localStorage.getItem('app_config');
+            if (legacyConfig) {
+                const parsed = JSON.parse(legacyConfig);
+                if (parsed.provider) provider = parsed.provider;
+                // Migrate: if we have legacy but no common, seed common from legacy
+                if (!savedCommon && parsed.apiKey) {
+                    localStorage.setItem(COMMON_STORAGE_KEY, JSON.stringify({
+                        apiKey: parsed.apiKey,
+                        selectedPersonaId: parsed.selectedPersonaId || personaId,
+                    }));
+                }
             }
 
-            return lastUsedConfig;
-
+            return loadConfig(provider, personaId, DEFAULT_CONFIG);
         } catch (e) {
             console.error("Failed to load config from localStorage", e);
         }
@@ -88,8 +93,10 @@ const App: React.FC = () => {
         return DEFAULT_THEME_CONFIG;
     });
 
-    // Save config to localStorage whenever it changes
+    // Save config to localStorage whenever it changes (split: common + model-specific)
     React.useEffect(() => {
+        saveConfig(config);
+        // Also save to legacy key for backward compat (will be read on first load if no common key)
         localStorage.setItem('app_config', JSON.stringify(config));
     }, [config]);
 
