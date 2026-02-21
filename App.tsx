@@ -367,7 +367,7 @@ const App: React.FC = () => {
                                         <span className="material-symbols-outlined text-[#ffd700] text-2xl">
                                             <Swords size={28} className="text-[#ffd700]" />
                                         </span>
-                                        <div className="flex flex-col w-full">
+                                        <div className={`flex flex-col w-full ${isPortrait ? 'hidden' : ''}`}>
                                             <span className="text-[8px] text-blue-200 uppercase tracking-widest font-bold mb-0.5">Currently Playing</span>
                                             <input
                                                 type="text"
