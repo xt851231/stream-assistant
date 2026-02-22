@@ -1,5 +1,59 @@
 # Learnings
 
+## [2026-02-22 17:15] Fixed Camera/Mic Persisting After Disconnect
+
+**The Problem:**
+When the user clicked "Disconnect", the camera, microphone, and screen share elements remained active (e.g. webcam light stayed on).
+
+**Root Cause:**
+1. The `AudioWorkletNode.disconnect()` method in `media-utils.js` throws an error in Chrome if the node was never connected to an output destination (which it wasn't, as it just processes PCM data).
+2. Because `audioStreamerRef.current.stop()` threw an unhandled exception, `LiveAPIContext.cleanupMedia()` crashed midway and never reached `videoStreamer.stop()`.
+3. The `App.tsx` local state for `mediaConfig` held onto `videoEnabled: true`, so when a user reconnected, the UI toggles were out of sync.
+
+**The Solution:**
+1. Wrapped `this.audioWorklet.disconnect()` in a `try/catch` block within `AudioStreamer.stop()`.
+2. Wrapped each individual streamer stop sequence in `cleanupMedia()` with robust `try/catch` blocks to ensure a failure in one doesn't crash the teardown of the others.
+3. Updated `handleConnect` in `App.tsx` to explicitly reset local `mediaConfig` toggles to `false` when manually disconnecting.
+
+**Key Changes:**
+- `lib/utils/media-utils.js`: Hardened `AudioStreamer.stop()`.
+- `contexts/LiveAPIContext.tsx`: Hardened `cleanupMedia()`.
+- `App.tsx`: Added `setMediaConfig` state reset in `handleConnect()`.
+- `tests/media_cleanup.test.js`: Added assertions to ensure `try/catch` wrappers exist around media stop commands.
+
+**The Problem:**
+1. The Chat Box completely took over the screen layout when Portrait Mode was toggled.
+2. The browser consoles showed 50+ warnings regarding form fields missing `id`, `name`, and `<label>` attributes, causing autofill/accessibility issues.
+
+**Root Cause:**
+1. Portrait Layout Bug: The Chat sidebar container was being assigned both `h-full` and `h-[40%]` classes in portrait mode because I didn't completely remove `h-full` from the generic classlist.
+2. Form Field Warnings: Various `<input>`, `<select>`, and `<textarea>` components in `ConfigurationMenu`, `MediaControlHub`, `App`, and `ChatSidebar` were created for visual purposes but skipped standard W3C form attributes.
+
+**The Solution:**
+1. Removed `h-full` from the root string in `App.tsx` and moved it appropriately to only render during landscape conditional checks.
+2. Added `id`, `name`, and `aria-label` attributes to every identified `input`, `select`, and `textarea` element to appease the HTML accessibility warnings and screen readers.
+
+**Key Changes:**
+- `App.tsx`: Fixed portrait mode class logic. Added attributes to `gameTitle` input.
+- `components/ChatSidebar.tsx`: Added form attributes to chat input.
+- `components/MediaControlHub.tsx`: Added form attributes to device selectors and volume sliders.
+- `components/ConfigurationMenu.tsx`: Systematically injected `id={settingId}`, `name={settingId}` and `aria-label` to all dynamically generated inputs, as well as static appearance sliders.
+
+**The Problem:**
+Automated bots (Bolt, Palette, Sentinel) had proposed branches for various architectural improvements. However, each branch contained lockfile changes that conflicted, making a direct git merge messy. 
+
+**Root Cause:**
+Independent automated systems generated branches simultaneously without awareness of each other, leading to overlapping lockfile states and `.jules` documentation tracking.
+
+**The Solution:**
+Manually ported the core logic from the six proposed branches into the main application to ensure a clean commit history and proper test coverage.
+
+**Key Changes:**
+1. **Performance (Bolt):** Applied `React.memo`, `useCallback`, and `useMemo` in `App.tsx` and `ChatSidebar.tsx` to prevent unnecessary re-renders during high-frequency state updates (like typing the game title).
+2. **Performance (Bolt):** Optimized memory allocation in `Stage.tsx` by reusing an offscreen canvas (`tempCanvasRef`) during resize events.
+3. **Accessibility (Palette):** Added `aria-label`, `title`, and `aria-pressed` attributes to all icon-only buttons in `Toolbelt.tsx` to support screen readers.
+4. **Security (Sentinel):** Fixed sensitive data leakage by redacting actual text content from `console.log` statements in `BrowserTTSAdapter.js` (now logs text length instead). Added `tests/security_logging_redaction.test.js` to ensure TDD compliance.
+
 ## [2026-02-21 23:25] Systematized Media Pipeline Protections
 
 **The Problem:**

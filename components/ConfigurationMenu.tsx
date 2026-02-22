@@ -226,6 +226,9 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
 
                     {field.type === 'select' ? (
                         <select
+                            id={`config-select-${settingId}`}
+                            name={settingId}
+                            aria-label={field.label}
                             className="w-full bg-[#162032] border border-gray-600 text-white text-sm rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                             value={String(config[settingId as keyof AppConfig] || '')}
                             onChange={(e) => handleChange(settingId as keyof AppConfig, e.target.value)}
@@ -240,6 +243,9 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                         </select>
                     ) : field.type === 'textarea' ? (
                         <textarea
+                            id={`config-textarea-${settingId}`}
+                            name={settingId}
+                            aria-label={field.label}
                             rows={field.rows || 3}
                             className="w-full bg-[#162032] border border-gray-600 text-white text-xs rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none resize-none font-mono"
                             value={String(config[settingId as keyof AppConfig] || '')}
@@ -258,6 +264,9 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                         </div>
                     ) : field.type === 'slider' ? (
                         <input
+                            id={`config-slider-${settingId}`}
+                            name={settingId}
+                            aria-label={field.label}
                             type="range"
                             min={field.min}
                             max={field.max}
@@ -268,6 +277,9 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                         />
                     ) : (
                         <input
+                            id={`config-input-${settingId}`}
+                            name={settingId}
+                            aria-label={field.label}
                             type={field.type}
                             className="w-full bg-[#162032] border border-gray-600 text-white text-sm rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                             value={String(config[settingId as keyof AppConfig] || '')}
@@ -323,6 +335,9 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                     <div className="space-y-1">
                                         <label className="text-xs text-gray-400 font-display uppercase tracking-wider">Provider</label>
                                         <select
+                                            id="global-provider-select"
+                                            name="provider"
+                                            aria-label="Provider"
                                             className="w-full bg-[#162032] border border-gray-600 text-white text-sm rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                                             value={currentModel.providerId}
                                             onChange={(e) => {
@@ -339,6 +354,9 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                     <div className="space-y-1">
                                         <label className="text-xs text-gray-400 font-display uppercase tracking-wider">Model Mode</label>
                                         <select
+                                            id="global-model-select"
+                                            name="modelId"
+                                            aria-label="Model Mode"
                                             className="w-full bg-[#162032] border border-gray-600 text-white text-sm rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                                             value={currentModelId}
                                             onChange={(e) => handleModelChange(e.target.value)}
@@ -391,6 +409,9 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                             <div className="space-y-1">
                                 <label className="text-xs text-gray-400 font-display uppercase tracking-wider">Image URL</label>
                                 <input
+                                    id="appearance-bg-image"
+                                    name="backgroundImage"
+                                    aria-label="Background Image URL"
                                     type="text"
                                     className="w-full bg-[#162032] border border-gray-600 text-white text-sm rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                                     placeholder="https://example.com/image.jpg"
@@ -405,6 +426,9 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                     <span className="text-[#ffd700] font-mono">{themeConfig?.blur}px</span>
                                 </div>
                                 <input
+                                    id="appearance-bg-blur"
+                                    name="blur"
+                                    aria-label="Background Blur"
                                     type="range"
                                     min="0" max="20" step="1"
                                     value={themeConfig?.blur ?? 0}
@@ -421,6 +445,9 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                             <div className="space-y-1">
                                 <label className="text-xs text-gray-400 font-display uppercase tracking-wider">Asset URL (Image/Video)</label>
                                 <input
+                                    id="appearance-asset-url"
+                                    name="startScreenUrl"
+                                    aria-label="Start Screen Asset URL"
                                     type="text"
                                     className="w-full bg-[#162032] border border-gray-600 text-white text-sm rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                                     placeholder="https://example.com/start.mp4"
@@ -460,6 +487,9 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                                 <span className="text-[#ffd700] font-mono">{value}</span>
                                             </div>
                                             <input
+                                                id={`appearance-opacity-${key}`}
+                                                name={key}
+                                                aria-label={`${key.replace(/([A-Z])/g, ' $1').trim()} Opacity`}
                                                 type="range"
                                                 min="0" max="1" step="0.05"
                                                 value={value}

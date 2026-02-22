@@ -13,7 +13,7 @@ interface ChatSidebarProps {
     themeConfig?: ThemeConfig;
 }
 
-const ChatSidebar: React.FC<ChatSidebarProps> = ({ messages, onSendMessage, onClose, videoStream, style, themeConfig }) => {
+const ChatSidebar: React.FC<ChatSidebarProps> = React.memo(({ messages, onSendMessage, onClose, videoStream, style, themeConfig }) => {
     const [input, setInput] = useState('');
     const endRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -120,6 +120,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ messages, onSendMessage, onCl
             >
                 <form onSubmit={handleSubmit} className="flex gap-2 items-center h-10 w-full">
                     <input
+                        id="chat-message-input"
+                        name="chatMessage"
+                        aria-label="Chat message input"
                         className="flex-1 min-w-0 bg-[#0a0f16] border border-gray-600 text-white rounded px-3 text-[11px] focus:outline-none focus:border-[#ffd700] placeholder-gray-600 font-display transition-colors h-full"
                         placeholder="Send message..."
                         type="text"
@@ -159,6 +162,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ messages, onSendMessage, onCl
             )}
         </section>
     );
-};
+});
 
 export default ChatSidebar;

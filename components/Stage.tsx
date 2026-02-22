@@ -13,7 +13,7 @@ interface StageProps {
     isPortrait?: boolean;
 }
 
-const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStream, onCanvasReady, style, themeConfig, isPortrait }) => {
+const Stage: React.FC<StageProps> = React.memo(({ tool, color, brushSize, onClear, videoStream, onCanvasReady, style, themeConfig, isPortrait }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -21,6 +21,7 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
     const [isDrawing, setIsDrawing] = useState(false);
     const contextRef = useRef<CanvasRenderingContext2D | null>(null);
     const requestRef = useRef<number>();
+    const tempCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
     // Refs for props to avoid re-creating ResizeObserver
     const toolRef = useRef(tool);
@@ -67,11 +68,21 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
 
                     requestRef.current = requestAnimationFrame(() => {
                         // Save current content
-                        const tempCanvas = document.createElement('canvas');
-                        tempCanvas.width = canvas.width;
-                        tempCanvas.height = canvas.height;
+                        if (!tempCanvasRef.current) {
+                            tempCanvasRef.current = document.createElement('canvas');
+                        }
+                        const tempCanvas = tempCanvasRef.current;
+
+                        let resized = false;
+                        if (tempCanvas.width !== canvas.width || tempCanvas.height !== canvas.height) {
+                            tempCanvas.width = canvas.width;
+                            tempCanvas.height = canvas.height;
+                            resized = true;
+                        }
+
                         const tempCtx = tempCanvas.getContext('2d');
                         if (tempCtx && canvas.width > 0 && canvas.height > 0) {
+                            if (resized) tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
                             tempCtx.drawImage(canvas, 0, 0);
                         }
 
@@ -233,6 +244,6 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
             </div>
         </section>
     );
-};
+});
 
 export default Stage;

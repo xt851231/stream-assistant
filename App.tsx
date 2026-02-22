@@ -172,14 +172,21 @@ const App: React.FC = () => {
     const handleConnect = async () => {
         if (connected) {
             await disconnect();
+            // Clear local cached config so "Go Live" later starts completely clean
+            setMediaConfig(prev => ({
+                ...prev,
+                audioEnabled: false,
+                videoEnabled: false,
+                screenShareEnabled: false
+            }));
         } else {
             await connect(config);
         }
     };
 
-    const handleSendMessage = (text: string) => {
+    const handleSendMessage = React.useCallback((text: string) => {
         sendMessage(text, config);
-    };
+    }, [sendMessage, config]);
 
     // Media Handlers
     // Media Handlers
@@ -228,11 +235,24 @@ const App: React.FC = () => {
 
 
 
-    const triggerClearStage = () => {
+    const triggerClearStage = React.useCallback(() => {
         // Dispatch custom event for Stage component
         const event = new Event('STAGE_CLEAR');
         document.dispatchEvent(event);
-    };
+    }, []);
+
+    const handleCloseChat = React.useCallback(() => {
+        setIsChatOpen(false);
+    }, []);
+
+    const stageStyle = React.useMemo(() => ({
+        backgroundColor: getBgColor('#000000', themeConfig?.opacity?.mainStage || 0.8)
+    }), [themeConfig?.opacity?.mainStage]);
+
+    const sidebarStyle = React.useMemo(() => ({
+        backgroundColor: getBgColor('#05080c', themeConfig?.opacity?.sidebar || 0.9),
+        backdropFilter: themeConfig?.backgroundImage ? `blur(${(themeConfig?.blur || 0) / 2}px)` : 'none'
+    }), [themeConfig?.opacity?.sidebar, themeConfig?.backgroundImage, themeConfig?.blur]);
 
 
 
@@ -372,6 +392,9 @@ const App: React.FC = () => {
                                         <div className={`flex flex-col w-full ${isPortrait ? 'hidden' : ''}`}>
                                             <span className="text-[8px] text-blue-200 uppercase tracking-widest font-bold mb-0.5">Currently Playing</span>
                                             <input
+                                                id="game-title-input"
+                                                name="gameTitle"
+                                                aria-label="Currently Playing Game Title"
                                                 type="text"
                                                 value={gameTitle}
                                                 onChange={(e) => setGameTitle(e.target.value)}
@@ -444,9 +467,7 @@ const App: React.FC = () => {
                                     onCanvasReady={setOverlayCanvas}
                                     themeConfig={themeConfig}
                                     isPortrait={isPortrait}
-                                    style={{
-                                        backgroundColor: getBgColor('#000000', themeConfig?.opacity?.mainStage || 0.8)
-                                    }}
+                                    style={stageStyle}
                                 />
 
                                 <Toolbelt
@@ -467,7 +488,7 @@ const App: React.FC = () => {
                     {/* Sidebar Container with Transition */}
                     <aside
                         id="sidebar-panel"
-                        className={`flex flex-col shrink-0 h-full transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden ${isPortrait
+                        className={`flex flex-col shrink-0 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden ${isPortrait
                             ? (isChatOpen ? 'w-full h-[40%] translate-y-0 order-2' : 'h-0 translate-y-10 order-2')
                             : (isChatOpen ? 'w-[22%] h-full ml-6 translate-x-0' : 'w-0 h-full ml-0 translate-x-10')
                             }`}
@@ -478,13 +499,10 @@ const App: React.FC = () => {
                         <ChatSidebar
                             messages={messages}
                             onSendMessage={handleSendMessage}
-                            onClose={() => setIsChatOpen(false)}
+                            onClose={handleCloseChat}
                             videoStream={screenSharing ? cameraStream : null}
                             themeConfig={themeConfig}
-                            style={{
-                                backgroundColor: getBgColor('#05080c', themeConfig?.opacity?.sidebar || 0.9),
-                                backdropFilter: themeConfig?.backgroundImage ? `blur(${(themeConfig?.blur || 0) / 2}px)` : 'none'
-                            }}
+                            style={sidebarStyle}
                         />
                     </aside>
                 </section>

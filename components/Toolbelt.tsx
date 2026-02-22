@@ -43,6 +43,7 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
                     onClick={() => setTool('pen')}
                     aria-label="Pen Tool"
                     title="Pen Tool"
+                    aria-pressed={tool === 'pen'}
                     className={`group relative size-8 rounded flex items-center justify-center transition-transform hover:scale-105 ${tool === 'pen' ? 'bg-[#2b6cee] border-2 border-[#ffd700]' : 'bg-[#1e293b] border-2 border-gray-600'}`}
                 >
                     <Pen size={14} className={tool === 'pen' ? 'text-white' : 'text-gray-400'} />
@@ -51,6 +52,7 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
                     onClick={() => setTool('eraser')}
                     aria-label="Eraser Tool"
                     title="Eraser Tool"
+                    aria-pressed={tool === 'eraser'}
                     className={`group relative size-8 rounded flex items-center justify-center transition-transform hover:scale-105 ${tool === 'eraser' ? 'bg-[#2b6cee] border-2 border-[#ffd700]' : 'bg-[#1e293b] border-2 border-gray-600'}`}
                 >
                     <Eraser size={14} className={tool === 'eraser' ? 'text-white' : 'text-gray-400'} />
@@ -76,6 +78,7 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
                                 onClick={() => setBrushSize(size)}
                                 aria-label={`Brush Size ${size}px`}
                                 title={`Brush Size ${size}px`}
+                                aria-pressed={brushSize === size}
                                 className={`rounded-full bg-gray-400 hover:bg-white transition-all ${brushSize === size ? 'bg-white ring-2 ring-[#ffd700]' : ''}`}
                                 style={{ width: Math.max(8, size * 1.5), height: Math.max(8, size * 1.5) }}
                             />
@@ -90,6 +93,7 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
                                 onClick={() => { setColor(c); setTool('pen'); }}
                                 aria-label={`Select Color ${COLOR_NAMES[c] || c}`}
                                 title={`Select Color ${COLOR_NAMES[c] || c}`}
+                                aria-pressed={color === c}
                                 className={`size-6 rounded-full border-2 transition-transform hover:scale-110 shadow-sm ${color === c ? 'border-white scale-110 ring-2 ring-gray-400' : 'border-gray-600'}`}
                                 style={{ backgroundColor: c }}
                             />

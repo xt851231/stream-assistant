@@ -294,9 +294,15 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
 
     const cleanupMedia = async () => {
-        if (audioStreamerRef.current) await audioStreamerRef.current.stop();
-        if (videoStreamerRef.current) await videoStreamerRef.current.stop();
-        if (screenCaptureRef.current) await screenCaptureRef.current.stop();
+        if (audioStreamerRef.current) {
+            try { await audioStreamerRef.current.stop(); } catch (e) { console.error("Error stopping audio:", e); }
+        }
+        if (videoStreamerRef.current) {
+            try { await videoStreamerRef.current.stop(); } catch (e) { console.error("Error stopping video:", e); }
+        }
+        if (screenCaptureRef.current) {
+            try { await screenCaptureRef.current.stop(); } catch (e) { console.error("Error stopping screen:", e); }
+        }
         audioStreamerRef.current = null;
         videoStreamerRef.current = null;
         screenCaptureRef.current = null;

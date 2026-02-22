@@ -166,6 +166,9 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                             <span>Microphone</span>
                         </div>
                         <select
+                            id="microphone-select"
+                            name="microphone"
+                            aria-label="Microphone"
                             className="w-full bg-[#162032] border border-gray-600 text-white text-xs rounded p-1.5 outline-none focus:border-blue-500"
                             value={config.microphoneId}
                             onChange={(e) => handleChange('microphoneId', e.target.value)}
@@ -188,6 +191,9 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                             <span>Camera</span>
                         </div>
                         <select
+                            id="camera-select"
+                            name="camera"
+                            aria-label="Camera"
                             className="w-full bg-[#162032] border border-gray-600 text-white text-xs rounded p-1.5 outline-none focus:border-blue-500"
                             value={config.cameraId}
                             onChange={(e) => handleChange('cameraId', e.target.value)}
@@ -271,6 +277,9 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                             <span className="font-mono text-[#ffd700]">{config.aiVolume}%</span>
                         </div>
                         <input
+                            id="ai-volume-slider"
+                            name="aiVolume"
+                            aria-label="AI Voice Volume"
                             type="range"
                             min="0" max="100"
                             value={config.aiVolume}
@@ -289,6 +298,9 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                             <span className="font-mono text-[#ffd700]">{config.systemVolume}%</span>
                         </div>
                         <input
+                            id="game-volume-slider"
+                            name="gameVolume"
+                            aria-label="Game Audio Volume"
                             type="range"
                             min="0" max="100"
                             value={config.systemVolume}
