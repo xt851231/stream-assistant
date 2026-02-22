@@ -20,6 +20,7 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
     const [isDrawing, setIsDrawing] = useState(false);
     const contextRef = useRef<CanvasRenderingContext2D | null>(null);
     const requestRef = useRef<number>();
+    const tempCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
     // Refs for props to avoid re-creating ResizeObserver
     const toolRef = useRef(tool);
@@ -66,9 +67,16 @@ const Stage: React.FC<StageProps> = ({ tool, color, brushSize, onClear, videoStr
 
                     requestRef.current = requestAnimationFrame(() => {
                         // Save current content
-                        const tempCanvas = document.createElement('canvas');
+                        if (!tempCanvasRef.current) {
+                            tempCanvasRef.current = document.createElement('canvas');
+                        }
+                        const tempCanvas = tempCanvasRef.current;
+
+                        // Resize temp canvas to match current canvas dimensions
+                        // This also clears it, preparing it for the copy
                         tempCanvas.width = canvas.width;
                         tempCanvas.height = canvas.height;
+
                         const tempCtx = tempCanvas.getContext('2d');
                         if (tempCtx) {
                             tempCtx.drawImage(canvas, 0, 0);
