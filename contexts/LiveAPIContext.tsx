@@ -55,6 +55,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const isSpeakingRef = useRef<boolean>(false);
     const nextProactiveInteractionTimeRef = useRef<number>(0);
     const isModelRespondingRef = useRef<boolean>(false);
+    const sessionHandleRef = useRef<string | null>(null);
 
     // Helper to schedule next proactive interaction with jitter
     const scheduleNextProactive = useCallback(() => {
@@ -158,6 +159,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             case 'output_transcription':
                 addMessage(message.data.text, 'assistant', message.data.finished);
                 break;
+            case 'session_resumption':
+                sessionHandleRef.current = message.data;
+                break;
             case 'setup_complete':
                 const currentPersonaId = latestConfigRef.current?.selectedPersonaId;
                 const persona = PERSONAS.find(p => p.id === currentPersonaId);
@@ -215,6 +219,12 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             // Re-create client
             const modelDef = MODEL_REGISTRY[config.provider];
             const adapterType = modelDef?.protocol === 'websocket' ? 'live' : 'flash';
+
+            // If switching away from Live API, clear the session handle constraints
+            if (adapterType !== 'live') {
+                sessionHandleRef.current = null;
+            }
+
             clientRef.current = ModelClient.createAdapter(adapterType, {
                 apiKey: config.apiKey,
                 modelId: config.modelId,
@@ -237,6 +247,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 ttsRate: config.ttsRate,
                 ttsPitch: config.ttsPitch,
                 googleGrounding: config.googleGrounding,
+                sessionHandle: sessionHandleRef.current,
             });
 
             clientRef.current.on('content', handleMessage);
@@ -569,6 +580,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 ttsRate: newConfig.ttsRate,
                 ttsPitch: newConfig.ttsPitch,
                 googleGrounding: newConfig.googleGrounding,
+                sessionHandle: sessionHandleRef.current,
             });
 
             // Re-attach event handlers
