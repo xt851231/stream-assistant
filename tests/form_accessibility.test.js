@@ -16,10 +16,13 @@ test('Components should contain accessibility attributes for form fields', () =>
     const chatSidebarContent = fs.readFileSync(path.join(rootDir, 'components', 'ChatSidebar.tsx'), 'utf8');
     assert.ok(chatSidebarContent.includes('id="chat-message-input"'), 'ChatSidebar.tsx is missing chat input id');
     assert.ok(chatSidebarContent.includes('aria-label="Chat message input"'), 'ChatSidebar.tsx is missing chat input aria-label');
+    assert.ok(chatSidebarContent.includes('aria-label="Send Message"'), 'ChatSidebar.tsx is missing send button aria-label');
 
     const mediaHubContent = fs.readFileSync(path.join(rootDir, 'components', 'MediaControlHub.tsx'), 'utf8');
     assert.ok(mediaHubContent.includes('id="microphone-select"'), 'MediaControlHub.tsx is missing mic input id');
     assert.ok(mediaHubContent.includes('aria-label="AI Voice Volume"'), 'MediaControlHub.tsx is missing volume aria-label');
+    assert.ok(mediaHubContent.includes('role="switch"'), 'MediaControlHub.tsx is missing switch role');
+    assert.ok(mediaHubContent.includes('aria-label="Capture Game Audio"'), 'MediaControlHub.tsx is missing game audio toggle aria-label');
 
     const configMenuContent = fs.readFileSync(path.join(rootDir, 'components', 'ConfigurationMenu.tsx'), 'utf8');
     assert.ok(configMenuContent.includes('id={`config-select-${settingId}`}'), 'ConfigurationMenu.tsx is missing dynamic setting id');

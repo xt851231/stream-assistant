@@ -220,6 +220,8 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.audioEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title="Toggle Microphone"
+                        aria-label="Toggle Microphone"
+                        aria-pressed={config.audioEnabled}
                     >
                         <Mic size={16} />
                         <span className="text-[9px] mt-1 font-bold">MIC</span>
@@ -231,6 +233,8 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.videoEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title="Toggle Camera"
+                        aria-label="Toggle Camera"
+                        aria-pressed={config.videoEnabled}
                     >
                         <Video size={16} />
                         <span className="text-[9px] mt-1 font-bold">CAM</span>
@@ -242,6 +246,8 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.screenShareEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title="Toggle Screen Share"
+                        aria-label="Toggle Screen Share"
+                        aria-pressed={config.screenShareEnabled}
                     >
                         <Monitor size={16} />
                         <span className="text-[9px] mt-1 font-bold">SCREEN</span>
@@ -257,6 +263,9 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                     <button
                         onClick={() => handleChange('screenAudio', !config.screenAudio)}
                         className={`w-8 h-4 rounded-full relative transition-colors ${config.screenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
+                        role="switch"
+                        aria-checked={config.screenAudio}
+                        aria-label="Capture Game Audio"
                     >
                         <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${config.screenAudio ? 'translate-x-4' : 'translate-x-0'}`} />
                     </button>
