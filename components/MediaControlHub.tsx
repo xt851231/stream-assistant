@@ -216,7 +216,6 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                     <button
                         onClick={() => {
                             handleChange('audioEnabled', !config.audioEnabled);
-                            onToggleAudio?.(!config.audioEnabled);
                         }}
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.audioEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
@@ -228,7 +227,6 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                     <button
                         onClick={() => {
                             handleChange('videoEnabled', !config.videoEnabled);
-                            onToggleVideo?.(!config.videoEnabled);
                         }}
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.videoEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
@@ -240,7 +238,6 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                     <button
                         onClick={() => {
                             handleChange('screenShareEnabled', !config.screenShareEnabled);
-                            onToggleScreen?.(!config.screenShareEnabled);
                         }}
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.screenShareEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}

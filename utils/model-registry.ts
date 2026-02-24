@@ -1,5 +1,6 @@
 import { AppConfig } from '../types';
 import { PERSONAS, VOICES, DEFAULT_CONFIG } from '../constants';
+import { safeJsonParse, validateAndMergeConfig } from './storage-utils';
 
 export { PERSONAS, VOICES };
 
@@ -18,19 +19,11 @@ export function saveModelConfig(config: AppConfig): void {
 
 /** Load model config from localStorage, falling back to defaults */
 export function loadModelConfig(provider: string): AppConfig {
-    try {
-        const key = getStorageKey(provider);
-        const saved = localStorage.getItem(key);
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            // Merge with defaults to pick up any new fields added since last save
-            return { ...DEFAULT_CONFIG, ...parsed, provider };
-        }
-    } catch (e) {
-        console.error(`Failed to load config for ${provider}`, e);
-    }
-    // No saved config for this model — return defaults with provider set
-    return { ...DEFAULT_CONFIG, provider };
+    const key = getStorageKey(provider);
+    const saved = localStorage.getItem(key);
+    const parsed = safeJsonParse(saved);
+    const validated = validateAndMergeConfig(DEFAULT_CONFIG, parsed);
+    return { ...validated, provider };
 }
 
 export function getEffectiveSettings(requiresTTS: boolean, settings: string[]): string[] {

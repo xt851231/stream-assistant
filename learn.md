@@ -1,5 +1,54 @@
 # Learnings
 
+## [2026-02-24 11:23] Fixed Media Stream Leaks and Audio Capture Latency
+
+**The Problem:**
+1. Screen share permissions and events seemed to trigger multiple times.
+2. The Gemini Live API felt significantly slower to respond than in previous iterations.
+3. Camera and Microphone streams remained active (e.g., webcam light staying on) even after clicking "Disconnect".
+
+**Root Cause:**
+1. The UI buttons in `MediaControlHub.tsx` were calling their corresponding configuration `handleChange()` methods and *also* firing direct `onToggle*` callbacks. Since `App.tsx` already responds to config changes by firing the toggle methods natively, the media streams were opened back-to-back, leaking concurrent streams that the application lost track of.
+2. The `capture.worklet.js` processing buffer size had been increased to 4096 samples (256ms) in a previous optimization commit, creating an inherent delay. Additionally, the native Client-Side VAD threshold was raised to 0.05, clipping the first syllables of speech and giving the AI less context.
+
+**The Solution:**
+1. Removed the redundant `onToggle*` callbacks from `MediaControlHub.tsx`'s buttons, relying solely on the single-source-of-truth configuration propagation.
+2. Reduced the `capture.worklet.js` buffer size to 1024 samples (64ms latency) and reset the VAD threshold back to 0.02 to capture the initial phonemes of speech instantly. Update unit tests to enforce the 1024 buffer size to prevent future regressions.
+
+**Key Changes:**
+- `components/MediaControlHub.tsx`: Removed redundant event handlers.
+- `public/audio-processors/capture.worklet.js`: Reduced buffer size to 1024.
+- `lib/utils/media-utils.js`: Reduced VAD threshold to 0.02 and updated padding chunk algorithms.
+- `tests/capture_worklet_perf.test.js`: Added assertion to lock the buffer size to 1024.
+## [2026-02-24 01:55] Security, Accessibility, and Performance Branch Merges
+
+**The Problem:**
+1. Configuration values read from `localStorage` were blindly parsed and merged into application state, posing a security risk from corrupted or poisoned data.
+2. Form elements and buttons in the Toolbelt lacked `aria-label`s, breaking accessibility for screen readers.
+3. The CSP (Content Security Policy) was missing, leaving the app open to potential XSS attacks.
+4. Stage canvas resizing caused unnecessary memory allocation and GC pauses.
+5. Adapter logic logged sensitive PII (transcriptions) to the console.
+
+**Root Cause:**
+1. Using raw `JSON.parse` coupled with `localStorage.getItem` directly in component state initialization.
+2. Rapid iteration ignored screen reader attributes on `<button>` and `<input>` elements.
+3. Initial vite configuration didn't include meta CSP headers.
+4. `document.createElement('canvas')` was called inside `requestAnimationFrame` on every resize tick.
+5. Debug logs from development remained active.
+
+**The Solution:**
+1. Created `utils/storage-utils.ts` with `safeJsonParse` and `validateAndMergeConfig` to strictly type-check and sanitize incoming `localStorage` payloads before applying them.
+2. Refactored the `Toolbelt.tsx` elements to include precise `aria-label` tags, and added `COLOR_NAMES` mapping for screen readers.
+3. Enforced a strict `<meta http-equiv="Content-Security-Policy">` in `index.html` and extracted inline scripts/styles into external files (`tailwind-config.js`, `importmap.json`, `index.css`).
+4. Implemented object pooling in `Stage.tsx` by using a `tempCanvasRef.current` strictly during the resize observer phase to prevent loop allocation.
+5. Replaced direct printing of transcript values with `length` redaction in `GeminiFlashAdapter.js` and `GeminiLiveAdapter.js`. Also scrubbed noisy debug output.
+
+**Key Changes:**
+- `utils/storage-utils.ts` & `App.tsx`: Added runtime config validation.
+- `index.html` & `public/`: Added strict CSP and removed inline scripts.
+- `components/Toolbelt.tsx`: Applied accessibility attributes and wrapped export in `React.memo` to improve performance.
+- `components/Stage.tsx`: Optimized canvas pool.
+- `lib/api/adapters/`: Scrubbed sensitive console logs and noisy debugging data.
 ## [2026-02-22 17:15] Fixed Camera/Mic Persisting After Disconnect
 
 **The Problem:**

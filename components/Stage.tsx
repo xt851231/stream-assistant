@@ -67,12 +67,15 @@ const Stage: React.FC<StageProps> = React.memo(({ tool, color, brushSize, onClea
                     }
 
                     requestRef.current = requestAnimationFrame(() => {
-                        // Save current content
-                        if (!tempCanvasRef.current) {
-                            tempCanvasRef.current = document.createElement('canvas');
+                        // Save current content using reusable canvas
+                        let tempCanvas = tempCanvasRef.current;
+                        if (!tempCanvas) {
+                            tempCanvas = document.createElement('canvas');
+                            tempCanvasRef.current = tempCanvas;
                         }
-                        const tempCanvas = tempCanvasRef.current;
 
+                        // Ensure tempCanvas matches current canvas dimensions before drawing
+                        // This avoids scaling issues if tempCanvas was previously smaller/larger
                         let resized = false;
                         if (tempCanvas.width !== canvas.width || tempCanvas.height !== canvas.height) {
                             tempCanvas.width = canvas.width;

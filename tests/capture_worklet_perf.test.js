@@ -109,5 +109,8 @@ describe('Capture worklet source code validation', () => {
             source.includes('.buffer') || source.includes('int16Data'),
             'Worklet should transfer the ArrayBuffer'
         );
+
+        // Assert that the buffer size is set correctly to ensure low latency
+        assert.ok(source.includes('this.bufferSize = 1024;'), 'Worklet buffersize should be 1024 for low latency');
     });
 });

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AppConfig, MediaConfig, ConnectionState, Message, ThemeConfig } from './types';
 import { DEFAULT_CONFIG, DEFAULT_MEDIA_CONFIG, INITIAL_MESSAGES, DEFAULT_THEME_CONFIG } from './constants';
 import { loadModelConfig, saveModelConfig } from './utils/model-registry';
+import { safeJsonParse, validateAndMergeConfig } from './utils/storage-utils';
 import ConfigurationMenu from './components/ConfigurationMenu';
 import MediaControlHub from './components/MediaControlHub';
 import Stage from './components/Stage';
@@ -39,8 +40,8 @@ const App: React.FC = () => {
             const routing = localStorage.getItem('app_config');
             let provider = DEFAULT_CONFIG.provider;
             if (routing) {
-                const parsed = JSON.parse(routing);
-                if (parsed.provider) provider = parsed.provider;
+                const parsed = safeJsonParse(routing);
+                if (parsed && parsed.provider) provider = parsed.provider;
             }
             // Load the full config for that model
             return loadModelConfig(provider);
@@ -51,30 +52,17 @@ const App: React.FC = () => {
     });
 
     const [mediaConfig, setMediaConfig] = useState<MediaConfig>(() => {
-        try {
-            const savedConfig = localStorage.getItem('media_config');
-            if (savedConfig) {
-                const parsed = JSON.parse(savedConfig);
-                // Always start with screen sharing disabled to avoid permission prompts on reload
-                return { ...DEFAULT_MEDIA_CONFIG, ...parsed, screenShareEnabled: false };
-            }
-        } catch (e) {
-            console.error("Failed to load media config", e);
-        }
-        return DEFAULT_MEDIA_CONFIG;
+        const savedConfig = localStorage.getItem('media_config');
+        const parsed = safeJsonParse(savedConfig);
+        const validated = validateAndMergeConfig(DEFAULT_MEDIA_CONFIG, parsed);
+        // Always start with screen sharing disabled to avoid permission prompts on reload
+        return { ...validated, screenShareEnabled: false };
     });
 
     const [themeConfig, setThemeConfig] = useState<ThemeConfig>(() => {
-        try {
-            const savedConfig = localStorage.getItem('theme_config');
-            if (savedConfig) {
-                const parsed = JSON.parse(savedConfig);
-                return { ...DEFAULT_THEME_CONFIG, ...parsed };
-            }
-        } catch (e) {
-            console.error("Failed to load theme config", e);
-        }
-        return DEFAULT_THEME_CONFIG;
+        const savedConfig = localStorage.getItem('theme_config');
+        const parsed = safeJsonParse(savedConfig);
+        return validateAndMergeConfig(DEFAULT_THEME_CONFIG, parsed);
     });
 
     const [isPortrait, setIsPortrait] = useState(false);

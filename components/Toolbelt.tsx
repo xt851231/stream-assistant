@@ -25,7 +25,7 @@ const COLOR_NAMES: Record<string, string> = {
 };
 const SIZES = [2, 4, 8, 12];
 
-const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, brushSize, setBrushSize, onClear, themeConfig, isPortrait }) => {
+const Toolbelt: React.FC<ToolbeltProps> = React.memo(({ tool, setTool, color, setColor, brushSize, setBrushSize, onClear, themeConfig, isPortrait }) => {
     return (
         <section
             aria-label="Toolbelt"
@@ -103,6 +103,6 @@ const Toolbelt: React.FC<ToolbeltProps> = ({ tool, setTool, color, setColor, bru
             )}
         </section>
     );
-};
+});
 
 export default Toolbelt;

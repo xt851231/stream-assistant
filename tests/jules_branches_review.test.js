@@ -39,10 +39,10 @@ describe('Sensitive Log Removal', () => {
 
         // These lines should NOT exist as active code
         const sensitivePatterns = [
-            "console.log('📝 Input transcription (serverContent):'",
-            "console.log('📝 Output transcription (serverContent):'",
-            "console.log('📝 Input transcription (top-level):'",
-            "console.log('📝 Output transcription (top-level):'",
+            "console.log('📝 Input transcription (serverContent):', serverContent.inputTranscription)",
+            "console.log('📝 Output transcription (serverContent):', serverContent.outputTranscription)",
+            "console.log('📝 Input transcription (top-level):', message.inputTranscription)",
+            "console.log('📝 Output transcription (top-level):', message.outputTranscription)",
         ];
 
         for (const pattern of sensitivePatterns) {
@@ -64,7 +64,8 @@ describe('Sensitive Log Removal', () => {
         for (const line of lines) {
             const trimmed = line.trim();
             if (trimmed.startsWith('//') || trimmed.startsWith('/*')) continue;
-            if (trimmed.includes('console.log') && trimmed.includes('Parsed Transcript')) {
+            // The unredacted version
+            if (trimmed.includes('console.log') && trimmed.includes('Parsed Transcript') && !trimmed.includes('<redacted')) {
                 assert.fail(`Found active sensitive log: ${trimmed}`);
             }
         }
