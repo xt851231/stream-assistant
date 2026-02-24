@@ -1,4 +1,9 @@
+import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
+
+const envFile = fs.readFileSync('.env.local', 'utf8');
+const match = envFile.match(/VITE_GEMINI_API_KEY=([^\n]+)/);
+if (match) process.env.VITE_GEMINI_API_KEY = match[1].replace(/"/g, '');
 
 const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
 
@@ -14,7 +19,7 @@ async function run() {
                 sessionResumption: {}
             }
         });
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 
     let handle = null;
     let gotResponseA = false;
@@ -32,11 +37,11 @@ async function run() {
 
     await sessionA.connect();
     await sessionA.send({ turns: [{ role: 'user', parts: [{ text: "My favorite color is Yellow." }] }] });
-    
+
     await new Promise(r => {
         const i = setInterval(() => { if (handle && gotResponseA) { clearInterval(i); r(); } }, 100);
     });
-    
+
     sessionA.disconnect();
     console.log("Disconnecting Felix. Handle saved.\n");
 

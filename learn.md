@@ -1,5 +1,27 @@
 # Learnings
 
+## [2026-02-24 13:10] Fixed Memory Loss and Voice Persistence on Persona Switch
+
+**The Problem:**
+1. Switching persona (e.g., from Luna to Felix) seemed to persist the voice from the previous persona. 
+2. After switching persona, the new persona did not seem to remember the previous conversation context.
+3. Live Assistant messages were occasionally getting cut short.
+
+**Root Cause:**
+1. **Config Ignored by Server:** We were passing `sessionResumption.handle` to the Live API connection config when switching personas. The Google GenAI backend assumes a session resumption restores the exact previous state, thus completely ignoring the new `systemInstruction` and `voice` configurations. This caused the old voice and persona to persist.
+2. **Missing History Injection:** Because we must force a new session to apply the new persona config (by omitting the `sessionResumption.handle`), the new session starts with a blank context. The previous chat history was not being actively provided to the new connection.
+3. **Turn Complete Event Order:** `GeminiLiveAdapter.js` emitted the `turn_complete` signal *before* the parsed incoming text chunks were completely forwarded to the application, causing `LiveAPIContext.tsx` to mark the message as finished prematurely. 
+
+**The Solution:**
+1. Updated `LiveAPIContext.tsx`'s `setConfig` logic to detect changes to `selectedPersonaId`. If changed, it actively nullifies `sessionHandleRef.current` to force a brand new session, allowing the Google GenAI backend to successfully process the new voice and system instructions.
+2. Implemented `messagesRef` in `LiveAPIContext.tsx` to synchronously track the active chat history, formatted via `convertMessagesToHistory()`. This translated `history` array is passed to the Adapter on new connections.
+3. Updated `GeminiLiveAdapter.js`'s `connect()` method to manually replay `this.config.history` via `session.sendClientContent()` immediately upon a successful connection to grant the new persona full context of the previous conversation.
+4. Re-ordered the event emission in `GeminiLiveAdapter.js`'s message parser to ensure `turnComplete` always fires *after* all text/audio components have been queued.
+
+**Key Changes:**
+- `contexts/LiveAPIContext.tsx`: Added `messagesRef`, persona change detection, and history array translation.
+- `lib/api/adapters/GeminiLiveAdapter.js`: Added history dispatch upon connection, and re-ordered the `turn_complete` emission.
+
 ## [2026-02-24 11:23] Fixed Media Stream Leaks and Audio Capture Latency
 
 **The Problem:**

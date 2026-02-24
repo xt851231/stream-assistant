@@ -57,6 +57,16 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const isModelRespondingRef = useRef<boolean>(false);
     const sessionHandleRef = useRef<string | null>(null);
     const pendingReconnectRef = useRef<boolean>(false);
+    const messagesRef = useRef<Message[]>([]);
+
+    const convertMessagesToHistory = (msgs: Message[]) => {
+        return msgs
+            .filter(m => m.type === 'user' || m.type === 'assistant' || m.type === 'user-transcript')
+            .map(m => ({
+                role: (m.type === 'user' || m.type === 'user-transcript') ? 'user' : 'model',
+                parts: [{ text: m.text }]
+            }));
+    };
 
     // Helper to schedule next proactive interaction with jitter
     const scheduleNextProactive = useCallback(() => {
@@ -114,6 +124,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                         text: lastMsg.text + text,
                         isFinished: isFinished
                     };
+                    messagesRef.current = updated;
                     return updated;
                 }
             }
@@ -129,7 +140,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 senderName = persona ? persona.name : 'Gemini';
             }
 
-            return [...prev, {
+            const newMessages = [...prev, {
                 id: crypto.randomUUID(),
                 sender: senderName,
                 text: text || '',
@@ -137,6 +148,8 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 timestamp: new Date(),
                 isFinished: isFinished
             }];
+            messagesRef.current = newMessages;
+            return newMessages;
         });
     };
 
@@ -269,6 +282,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 ttsPitch: config.ttsPitch,
                 googleGrounding: config.googleGrounding,
                 sessionHandle: sessionHandleRef.current,
+                history: !sessionHandleRef.current ? convertMessagesToHistory(messagesRef.current) : undefined,
             });
 
             clientRef.current.on('content', handleMessage);
@@ -566,6 +580,14 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         // Merge the update into the stored config
         const newConfig = { ...latestConfigRef.current, ...configUpdate };
+
+        // If persona changed, we must clear the handle to force a fresh session
+        // so the new System Instructions and Voice are applied by the Google Live API.
+        if (latestConfigRef.current.selectedPersonaId !== newConfig.selectedPersonaId) {
+            console.log("🔄 Persona changed. Clearing session handle to apply new instructions/voice.");
+            sessionHandleRef.current = null;
+        }
+
         latestConfigRef.current = newConfig;
 
         // For Live API, we need to reconnect to apply config changes
@@ -602,6 +624,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 ttsPitch: newConfig.ttsPitch,
                 googleGrounding: newConfig.googleGrounding,
                 sessionHandle: sessionHandleRef.current,
+                history: !sessionHandleRef.current ? convertMessagesToHistory(messagesRef.current) : undefined,
             });
 
             // Re-attach event handlers
