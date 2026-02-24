@@ -1,5 +1,62 @@
 # Learnings
 
+## [2026-02-24 17:15] Unified History Injection Across Model Protocols
+
+**The Problem:**
+1. Conversation history was lost when switching between models (Live vs. Flash) or when persona switches forced a session restart.
+2. Different models have incompatible ways of handling history: Gemini Live requires discrete WebSocket "turns," while Gemini Flash (REST) requires a persistent context array in every request.
+3. Injecting history must not trigger the model to respond immediately, or it would create a "double response" alongside the user's current input.
+
+**Root Cause:**
+1. The `ModelAdapter` interface lacked a standardized way to provide historical context to newly initialized adapters.
+2. Previous attempts at history injection in the Live API were sometimes colliding with the connection setup phase or causing protocol violations by setting `turnComplete: true`.
+
+**The Solution:**
+1. **Standardized Interface:** Added `setHistory(messages)` to the `ModelAdapter` base class.
+2. **Provider-Specific Implementation:**
+   - **Gemini Live:** Maps history to an array of `turns` and sends them via `session.sendClientContent` with `turnComplete: false`.
+   - **Gemini Flash:** Updates a local `this.history` buffer that is automatically prepended to all future REST requests.
+3. **Optimized Timing (Live API):** History is injected **only after** the `setup_complete` message is received. This prevents race conditions during the initial WebSocket handshake.
+4. **Resumption Guard:** If the session is resumed using a `sessionHandle`, manual history injection is skipped. The Gemini server naturally restores the full context when a handle is provided, and manual injection could cause conflicts or duplicates.
+5. **Sender Labeling:** Prefixes history text with the original sender's name (e.g., `[Luna]: Hello`) to help the model distinguish between different personas and users in the conversation log.
+6. **Context-Driven Sync:** Updated `LiveAPIContext.tsx` to automatically slice the last 100 messages from its central state and call `adapter.setHistory` inside the `setup_complete` event handler.
+
+**Key Changes:**
+- `lib/api/interfaces/ModelAdapter.js`: Added `setHistory` to the base class.
+- `lib/api/adapters/GeminiLiveAdapter.js` & `GeminiFlashAdapter.js`: Implemented specialized history handlers with resumption guards.
+- `contexts/LiveAPIContext.tsx`: Integrated history syncing into the `setup_complete` event handler.
+- `conductor/architecture/HISTORY_INJECTION.md`: Created detailed documentation of the injection strategy.
+- `tests/history_injection.test.js`: Verified timing, filtering, and resumption-skipping logic.
+
+**Post-Implementation Finding (Live API `role: "model"` issue):**
+1. While testing the above, the new persona still fails to acknowledge the injected history.
+2. According to the [Gemini Live API documentation on incremental updates](https://ai.google.dev/gemini-api/docs/live-guide#send-text), `sendClientContent` natively supports `role: "model"` to establish session context.
+3. Therefore, the failure is **not** due to an invalid role. The failure is likely caused by:
+   - **Pending Context Buffer:** We send the history with `turnComplete: false`. The API might require this to be immediately closed by a `turnComplete: true` action before it registers the context to memory. Since our next input usually comes via Realtime Audio rather than a concluding text turn, the context buffer might be dropped.
+   - **Strict Turn Alternation:** The API might enforce a strict `user` -> `model` -> `user` alternation. If our injected history array ends with a `user` message, and then the user speaks next, the API receives two consecutive `user` turns and might reset or ignore the history.
+   - **Formatting Errors:** Subtle bugs in mapping React state into the exact `[{ role, parts: [{ text }] }]` shape required by the backend.
+
+## [2026-02-24 16:25] Reverted History Injection Causing WebSocket Conflicts
+
+**The Problem:**
+1. Switching personas resulted in WebSocket conflicts and the connection entering a CLOSING or CLOSED state.
+2. The manual injection of chat history for new connections was colliding with the connection setup lifecycle.
+
+**Root Cause:**
+1. Explicitly injecting chat history via `sendClientContent` upon opening a new session created race conditions with the server, leading to protocol violations and 1007/1000 errors.
+2. The logic was unnecessary when `sessionResumption` is active, as the session handle inherently restores the context.
+
+**The Solution:**
+1. Reverted the history injection implementation in `LiveAPIContext.tsx` and `GeminiLiveAdapter.js`.
+2. When the user stays on the same persona, the application successfully uses `sessionResumption.handle` to restore the conversation context natively.
+3. When the user switches personas, the session handle is cleared, starting a fresh session without manual history injection, avoiding the conflicting state.
+4. Added test cases to verify that `GeminiLiveAdapter` correctly parses the session handle but ignores explicit history sending.
+
+**Key Changes:**
+- `contexts/LiveAPIContext.tsx`: Removed `convertMessagesToHistory` and history prop from `ModelClient.createAdapter`.
+- `lib/api/adapters/GeminiLiveAdapter.js`: Removed the `sendClientContent` block that injected history.
+- `tests/session_resumption.test.js`: Added new test to verify `sessionResumption` behavior without history.
+
 ## [2026-02-24 13:10] Fixed Memory Loss and Voice Persistence on Persona Switch
 
 **The Problem:**
@@ -1011,3 +1068,36 @@ Removed the `onSpeechEnd()` method from `GeminiLiveAdapter.js`. This restores th
 - `App.tsx`: Added `isPortrait` state, dynamic layout classes, and modified toolbar layout to hide extra media buttons only when portrait mode is true.
 - `components/Stage.tsx`: Accepted `isPortrait` prop and updated classes to `w-full` in portrait to preserve 16:9 without overflow.
 - `components/Toolbelt.tsx`: Accepted `isPortrait` prop and conditionally hid wide UI elements.
+
+## [2026-02-24 21:55] Fixed Live API History Injection Merging with Audio Input
+
+**The Problem:**
+1. When switching personas, the new persona received the injected conversation history but seemingly ignored it, failing to acknowledge past context or identity.
+
+**Root Cause:**
+1. History was injected as a single `user` turn via `session.sendClientContent({ turns: [...], turnComplete: false })`. 
+2. Because the turn was left open (`turnComplete: false`), the model waited for the turn to complete. When the user subsequently spoke, the incoming realtime audio was appended to that same open `user` turn. 
+3. The model processed the massive combined turn (History Text + Audio) and prioritized answering the immediate audio query, effectively burying the history as preamble text of the current question rather than recognizing it as past context.
+
+**The Solution:**
+1. Appended a dummy `model` turn (`{ role: "model", parts: [{ text: "Context acknowledged." }] }`) to the end of the history array sent to `sendClientContent`.
+2. This dummy turn successfully "closes" the history context in the model memory, establishing it as the past interaction. 
+3. When the user then speaks, the real-time audio creates a fresh, separate `user` turn, preventing context bleeding.
+
+**Key Changes:**
+- `lib/api/adapters/GeminiLiveAdapter.js`: Updated `setHistory` to append an acknowledged `model` turn.
+- `tests/history_injection.test.js`: Updated tests to reflect the new injection structure.
+
+## [2026-02-24 22:16] Refined History Injection with Active Greeting Prompt
+
+**The Problem:**
+1. The dummy `model` turn added previously correctly closed the history sequence, but the user still had to instigate the conversation.
+2. We want the new persona to proactively greet the user and acknowledge the history immediately upon connection, creating a seamless handover experience.
+
+**The Solution:**
+1. Replaced the dummy `model` turn with a second `user` turn containing the text `"Greetings!"` and `turnComplete: true`.
+2. This actively prompts the new persona to generate a response immediately (since the turn is complete). Because the first turn in the payload is the conversation history, the persona is fully aware of the context when generating the greeting.
+
+**Key Changes:**
+- `lib/api/adapters/GeminiLiveAdapter.js`: Updated `setHistory` to inject a secondary `"Greetings!"` user turn.
+- `tests/history_injection.test.js`: Updated assertions to expect the new two-turn structure.

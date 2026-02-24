@@ -59,14 +59,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const pendingReconnectRef = useRef<boolean>(false);
     const messagesRef = useRef<Message[]>([]);
 
-    const convertMessagesToHistory = (msgs: Message[]) => {
-        return msgs
-            .filter(m => m.type === 'user' || m.type === 'assistant' || m.type === 'user-transcript')
-            .map(m => ({
-                role: (m.type === 'user' || m.type === 'user-transcript') ? 'user' : 'model',
-                parts: [{ text: m.text }]
-            }));
-    };
+
 
     // Helper to schedule next proactive interaction with jitter
     const scheduleNextProactive = useCallback(() => {
@@ -181,6 +174,13 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 const persona = PERSONAS.find(p => p.id === currentPersonaId);
                 const welcomeMsg = persona ? `${persona.name} is online` : "Connected and ready!";
                 addMessage(welcomeMsg, 'system', true);
+
+                // Sync History (Inject last 100 messages into the new session ONLY IF NOT RESUMING)
+                // The adapter's setHistory handles the resumption check internally.
+                if (clientRef.current && messagesRef.current.length > 0) {
+                    const historyToSync = messagesRef.current.slice(-100);
+                    clientRef.current.setHistory(historyToSync);
+                }
                 break;
             case 'tool_call':
                 const functionCalls = message.data.functionCalls;
@@ -282,7 +282,6 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 ttsPitch: config.ttsPitch,
                 googleGrounding: config.googleGrounding,
                 sessionHandle: sessionHandleRef.current,
-                history: !sessionHandleRef.current ? convertMessagesToHistory(messagesRef.current) : undefined,
             });
 
             clientRef.current.on('content', handleMessage);
@@ -627,7 +626,6 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 ttsPitch: newConfig.ttsPitch,
                 googleGrounding: newConfig.googleGrounding,
                 sessionHandle: sessionHandleRef.current,
-                history: !sessionHandleRef.current ? convertMessagesToHistory(messagesRef.current) : undefined,
             });
 
             // Re-attach event handlers
