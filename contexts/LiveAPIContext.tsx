@@ -56,6 +56,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const nextProactiveInteractionTimeRef = useRef<number>(0);
     const isModelRespondingRef = useRef<boolean>(false);
     const sessionHandleRef = useRef<string | null>(null);
+    const pendingReconnectRef = useRef<boolean>(false);
 
     // Helper to schedule next proactive interaction with jitter
     const scheduleNextProactive = useCallback(() => {
@@ -200,8 +201,28 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                     }
                     return prev;
                 });
-                // Model finished responding — reschedule the proactive timer
-                scheduleNextProactive();
+
+                // If a GoAway message was received, now is the safe time to reconnect
+                if (pendingReconnectRef.current) {
+                    console.warn("🔄 Graceful GoAway Reconnect Triggered after turn completion.");
+                    pendingReconnectRef.current = false;
+                    if (latestConfigRef.current) {
+                        setConfig(latestConfigRef.current); // Use setConfig to handle the soft-reconnect logic
+                    }
+                } else {
+                    // Model finished responding — reschedule the proactive timer
+                    scheduleNextProactive();
+                }
+                break;
+            case 'go_away':
+                console.warn(`⏳ Server terminating connection in ${message.data?.timeLeft || 'unknown'}s. Caching state for graceful reconnect.`);
+                // If the model is idle, reconnect immediately. Otherwise flag for post-turn reconnect.
+                if (!isModelRespondingRef.current && !isSpeakingRef.current) {
+                    console.warn("🔄 Reconnecting immediately (Idle State)");
+                    if (latestConfigRef.current) setConfig(latestConfigRef.current);
+                } else {
+                    pendingReconnectRef.current = true;
+                }
                 break;
             case 'error':
                 isModelRespondingRef.current = false;
