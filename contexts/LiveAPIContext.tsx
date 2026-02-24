@@ -599,6 +599,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             clientRef.current.removeAllListeners();
             clientRef.current.disconnect();
 
+            // Explicitly wait for the WebSocket to close to prevent "Socket already closing" collisions
+            await new Promise(resolve => setTimeout(resolve, 300));
+
             // Create new adapter with updated config
             const adapterType = 'live';
             clientRef.current = ModelClient.createAdapter(adapterType, {
