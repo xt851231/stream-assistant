@@ -4,6 +4,18 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 🛡️ Sentinel: Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' https://esm.sh 'unsafe-inline';
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        connect-src 'self' https://esm.sh https://generativelanguage.googleapis.com wss://generativelanguage.googleapis.com;
+        img-src 'self' blob: data: https:;
+        media-src 'self' blob: data: https:;
+        frame-src 'none';
+        object-src 'none';
+    ">
     <title>Stream Quest</title>
 
     <link href="https://fonts.googleapis.com" rel="preconnect" />
@@ -207,16 +219,8 @@
             transform: translateY(0);
         }
     </style>
-    <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
-    "lucide-react": "https://esm.sh/lucide-react@^0.563.0"
-  }
-}
-</script>
+    <!-- 🛡️ Sentinel: External Import Map -->
+    <script type="importmap" src="/importmap.json"></script>
     <link rel="stylesheet" href="/index.css">
 </head>
 
