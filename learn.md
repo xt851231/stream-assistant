@@ -1101,3 +1101,24 @@ Removed the `onSpeechEnd()` method from `GeminiLiveAdapter.js`. This restores th
 **Key Changes:**
 - `lib/api/adapters/GeminiLiveAdapter.js`: Updated `setHistory` to inject a secondary `"Greetings!"` user turn.
 - `tests/history_injection.test.js`: Updated assertions to expect the new two-turn structure.
+
+## [2026-02-25 23:25] Merged Feature: Live Session Management and History Injection
+
+**The Problem:** 
+1. Previous versions had issues with lost conversation context during model/persona switches.
+2. WebSocket conflicts were common when attempting to resume or restart sessions with history.
+
+**Root Cause:**
+1. Timing issues in history injection (race conditions with `setup_complete`).
+2. Inconsistent handling of `turnComplete` across different history injection strategies.
+
+**The Solution:**
+1. Merged `feat/live-session-management` branch into `main`.
+2. Verified all 95 unit tests pass, ensuring no regressions in history injection, session resumption, or media pipeline stability.
+3. Consolidated the "Greetings!" active prompt strategy for seamless persona transitions.
+
+**Key Changes:**
+- `lib/api/adapters/GeminiLiveAdapter.js` & `GeminiFlashAdapter.js`: Unified history protocols.
+- `contexts/LiveAPIContext.tsx`: Hardened connection lifecycle and history sync.
+- `tests/`: Integrated full suite of history and resumption tests.
+
