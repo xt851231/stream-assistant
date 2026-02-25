@@ -217,7 +217,9 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         onClick={() => {
                             handleChange('audioEnabled', !config.audioEnabled);
                         }}
-                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.audioEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
+                        aria-label="Toggle Microphone"
+                        aria-pressed={config.audioEnabled}
+                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none ${config.audioEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title="Toggle Microphone"
                     >
@@ -228,7 +230,9 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         onClick={() => {
                             handleChange('videoEnabled', !config.videoEnabled);
                         }}
-                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.videoEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
+                        aria-label="Toggle Camera"
+                        aria-pressed={config.videoEnabled}
+                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none ${config.videoEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title="Toggle Camera"
                     >
@@ -239,7 +243,9 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         onClick={() => {
                             handleChange('screenShareEnabled', !config.screenShareEnabled);
                         }}
-                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.screenShareEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
+                        aria-label="Toggle Screen Share"
+                        aria-pressed={config.screenShareEnabled}
+                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none ${config.screenShareEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title="Toggle Screen Share"
                     >
@@ -256,7 +262,10 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                     </div>
                     <button
                         onClick={() => handleChange('screenAudio', !config.screenAudio)}
-                        className={`w-8 h-4 rounded-full relative transition-colors ${config.screenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
+                        role="switch"
+                        aria-checked={config.screenAudio}
+                        aria-label="Capture Game Audio"
+                        className={`w-8 h-4 rounded-full relative transition-colors focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none ${config.screenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
                     >
                         <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${config.screenAudio ? 'translate-x-4' : 'translate-x-0'}`} />
                     </button>
