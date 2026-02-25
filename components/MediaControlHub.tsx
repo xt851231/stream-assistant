@@ -27,6 +27,7 @@ interface DeviceInfo {
 const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onConfigChange, onClose, themeConfig, onToggleAudio, onToggleVideo, onToggleScreen, isPortrait, containerRef, triggerRef }) => {
     const [microphones, setMicrophones] = useState<DeviceInfo[]>([]);
     const [cameras, setCameras] = useState<DeviceInfo[]>([]);
+    const [speakers, setSpeakers] = useState<DeviceInfo[]>([]);
     const panelRef = useRef<HTMLElement>(null);
     const [portraitPosition, setPortraitPosition] = useState({ top: 0, left: 0, width: 300 });
 
@@ -35,6 +36,13 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
         SpeechAudioContext.setVolume(config.aiVolume);
         SpeechAudioContext.setSystemVolume(config.systemVolume);
     }, [config.aiVolume, config.systemVolume]);
+
+    // Sync output device to SpeechAudioContext
+    useEffect(() => {
+        if (config.audioOutputDevice) {
+            SpeechAudioContext.setSinkId(config.audioOutputDevice);
+        }
+    }, [config.audioOutputDevice]);
 
     // Compute position for portrait mode portal
     useLayoutEffect(() => {
@@ -83,8 +91,16 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         label: d.label || `Camera ${i + 1}`
                     }));
 
+                const spks = devices
+                    .filter(d => d.kind === 'audiooutput')
+                    .map((d, i) => ({
+                        deviceId: d.deviceId,
+                        label: d.label || `Speaker ${i + 1}`
+                    }));
+
                 setMicrophones(mics);
                 setCameras(cams);
+                setSpeakers(spks);
 
                 if (stream) {
                     stream.getTracks().forEach(t => t.stop());
@@ -260,6 +276,35 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                     >
                         <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${config.screenAudio ? 'translate-x-4' : 'translate-x-0'}`} />
                     </button>
+                </div>
+
+                {/* Output Device */}
+                <div className="space-y-1 pt-2 border-t border-gray-700">
+                    <div className="flex items-center gap-2 text-xs text-gray-300">
+                        <Volume2 size={12} className="text-blue-400" />
+                        <span>Output Device</span>
+                    </div>
+                    <select
+                        id="speaker-select"
+                        name="speaker"
+                        aria-label="Speaker"
+                        className="w-full bg-[#162032] border border-gray-600 text-white text-xs rounded p-1.5 outline-none focus:border-blue-500"
+                        value={config.audioOutputDevice || 'default'}
+                        onChange={(e) => handleChange('audioOutputDevice', e.target.value)}
+                    >
+                        {speakers.length === 0 ? (
+                            <option value="default">Default Device</option>
+                        ) : (
+                            <>
+                                <option value="default">Default Device</option>
+                                {speakers.map(speaker => (
+                                    <option key={speaker.deviceId} value={speaker.deviceId}>
+                                        {speaker.label}
+                                    </option>
+                                ))}
+                            </>
+                        )}
+                    </select>
                 </div>
 
                 {/* Volumes */}

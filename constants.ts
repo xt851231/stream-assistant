@@ -37,6 +37,7 @@ export const DEFAULT_MEDIA_CONFIG: MediaConfig = {
     aiVolume: 80,
     systemVolume: 50,
     screenAudio: true,
+    audioOutputDevice: 'default',
 };
 
 export const DEFAULT_THEME_CONFIG: ThemeConfig = {

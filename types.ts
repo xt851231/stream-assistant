@@ -104,4 +104,5 @@ export interface MediaConfig {
     aiVolume: number;
     systemVolume: number;
     screenAudio: boolean;
+    audioOutputDevice: string;
 }

@@ -1122,3 +1122,25 @@ Removed the `onSpeechEnd()` method from `GeminiLiveAdapter.js`. This restores th
 - `contexts/LiveAPIContext.tsx`: Hardened connection lifecycle and history sync.
 - `tests/`: Integrated full suite of history and resumption tests.
 
+## [2026-02-25 23:45] Supported Virtual Cable Audio Routing via setSinkId
+
+**The Problem:**
+1. Capturing screen share audio and simultaneously playing game/AI audio through the default speakers resulted in an echo loop if the stream was being captured by software like OBS.
+2. The user wanted a way to route the dashboard's audio specifically to a "Virtual Audio Cable" to separate tracks in OBS without feedback loops.
+
+**Root Cause:**
+1. `SpeechAudioContext.js` hardcoded the audio destination to `audioContext.destination`, which always corresponds to the OS default audio output device.
+2. The application UI lacked a way to enumerate or select audio output devices (speakers).
+
+**The Solution:**
+1. Updated `MediaControlHub.tsx` to enumerate devices of `kind === 'audiooutput'` and display them in a new "Output Device" dropdown.
+2. Added `audioOutputDevice` to `MediaConfig` to store the user's selection, which persists across reloads via the existing storage mechanism.
+3. Enhanced the `SpeechAudioContext` singleton with a `setSinkId(deviceId)` method utilizing the modern `AudioContext.setSinkId` web API.
+4. Added a synchronization effect in the UI to instantly reroute the `audioContext` output to the selected Virtual Cable without requiring a context restart.
+
+**Key Changes:**
+- `types.ts` & `constants.ts`: Added `audioOutputDevice` configuration node.
+- `components/MediaControlHub.tsx`: Implemented speaker enumeration and selection UI.
+- `lib/utils/SpeechAudioContext.js`: Added `setSinkId` support.
+- `tests/audio_routing.test.js`: Added assertions to ensure `setSinkId` acts predictably and handles missing browser support gracefully.
+
