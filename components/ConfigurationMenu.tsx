@@ -48,22 +48,34 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
         if (isOpen && triggerRef?.current) {
             const updatePosition = () => {
                 const rect = triggerRef.current!.getBoundingClientRect();
+                let newPos: { top: number; right: number; left: number; width: number };
+
                 if (isPortrait && containerRef?.current) {
                     const containerRect = containerRef.current.getBoundingClientRect();
-                    setPosition({
+                    newPos = {
                         top: rect.bottom + 8,
                         right: 0,
                         left: containerRect.left + 8,
                         width: containerRect.width - 16,
-                    });
+                    };
                 } else {
-                    setPosition({
+                    newPos = {
                         top: rect.bottom + 8,
                         right: window.innerWidth - rect.right,
                         left: 0,
                         width: 0,
-                    });
+                    };
                 }
+
+                setPosition(prev => {
+                    if (prev.top === newPos.top &&
+                        prev.right === newPos.right &&
+                        prev.left === newPos.left &&
+                        prev.width === newPos.width) {
+                        return prev;
+                    }
+                    return newPos;
+                });
             };
 
             updatePosition();

@@ -43,10 +43,17 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
         const updatePosition = () => {
             const containerRect = containerRef.current!.getBoundingClientRect();
             const triggerRect = triggerRef?.current?.getBoundingClientRect();
-            setPortraitPosition({
+            const newPos = {
                 top: triggerRect ? triggerRect.bottom + 8 : containerRect.top + 60,
                 left: containerRect.left + 8,
                 width: containerRect.width - 16,
+            };
+
+            setPortraitPosition(prev => {
+                if (prev.top === newPos.top && prev.left === newPos.left && prev.width === newPos.width) {
+                    return prev;
+                }
+                return newPos;
             });
         };
 

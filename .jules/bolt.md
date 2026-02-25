@@ -1,0 +1,3 @@
+## 2024-05-22 - Capture Phase Scroll Listeners Cause Excessive Re-renders
+**Learning:** Using `window.addEventListener('scroll', handler, true)` (capture phase) to update positioning of fixed elements (like menus) causes the handler to fire for *every* scroll event in the entire DOM, including scrolling within the menu itself. This leads to recursive re-render loops if the handler updates state without equality checks.
+**Action:** When using global scroll listeners for positioning, always implement strict equality checks before updating state, or check `event.target` to filter relevant scroll events.
