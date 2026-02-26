@@ -59,6 +59,8 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const pendingReconnectRef = useRef<boolean>(false);
     const messagesRef = useRef<Message[]>([]);
 
+    // Config Ref to break circular dependency
+    const setConfigRef = useRef<(config: Partial<AppConfig>) => void>(() => {});
 
 
     // Helper to schedule next proactive interaction with jitter
@@ -103,7 +105,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     }, [connected, scheduleNextProactive]);
 
     // Helper to add messages
-    const addMessage = (text: string, type: 'user' | 'assistant' | 'system' | 'user-transcript', isFinished: boolean = false) => {
+    const addMessage = useCallback((text: string, type: 'user' | 'assistant' | 'system' | 'user-transcript', isFinished: boolean = false) => {
         setMessages(prev => {
             // Logic to append to last message if it's the same type and not finished
             // Simplified for now, logic ported from LiveAPIDemo
@@ -144,9 +146,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             messagesRef.current = newMessages;
             return newMessages;
         });
-    };
+    }, []);
 
-    const handleMessage = (message: any) => {
+    const handleMessage = useCallback((message: any) => {
         switch (message.type) {
             case 'text':
                 isModelRespondingRef.current = true;
@@ -220,7 +222,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                     console.warn("🔄 Graceful GoAway Reconnect Triggered after turn completion.");
                     pendingReconnectRef.current = false;
                     if (latestConfigRef.current) {
-                        setConfig(latestConfigRef.current); // Use setConfig to handle the soft-reconnect logic
+                        setConfigRef.current(latestConfigRef.current); // Use setConfigRef to handle the soft-reconnect logic
                     }
                 } else {
                     // Model finished responding — reschedule the proactive timer
@@ -232,7 +234,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 // If the model is idle, reconnect immediately. Otherwise flag for post-turn reconnect.
                 if (!isModelRespondingRef.current && !isSpeakingRef.current) {
                     console.warn("🔄 Reconnecting immediately (Idle State)");
-                    if (latestConfigRef.current) setConfig(latestConfigRef.current);
+                    if (latestConfigRef.current) setConfigRef.current(latestConfigRef.current);
                 } else {
                     pendingReconnectRef.current = true;
                 }
@@ -242,337 +244,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 addMessage(`Error: ${message.data}`, 'system', true);
                 break;
         }
-    };
-
-    const connect = async (config: AppConfig) => {
-        if (connecting || connected) return;
-        setConnecting(true);
-        latestConfigRef.current = config;
-
-        try {
-            // Re-create client
-            const modelDef = MODEL_REGISTRY[config.provider];
-            const adapterType = modelDef?.protocol === 'websocket' ? 'live' : 'flash';
-
-            // If switching away from Live API, clear the session handle constraints
-            if (adapterType !== 'live') {
-                sessionHandleRef.current = null;
-            }
-
-            clientRef.current = ModelClient.createAdapter(adapterType, {
-                apiKey: config.apiKey,
-                modelId: config.modelId,
-                voice: config.voice,
-                systemInstruction: config.systemInstructions,
-                temperature: config.temperature,
-                topP: config.topP,
-                topK: config.topK,
-                thinkingBudget: config.thinkingBudget,
-                affectiveDialog: config.affectiveDialog,
-                inputTranscription: config.inputTranscription,
-                outputTranscription: config.outputTranscription,
-                enableVAD: config.enableVAD,
-                silenceDuration: config.silenceDuration,
-                prefixPadding: config.prefixPadding,
-                startSpeechSensitivity: config.startSpeechSensitivity === 'default' ? 'START_SENSITIVITY_UNSPECIFIED' : config.startSpeechSensitivity === 'high' ? 'START_SENSITIVITY_HIGH' : config.startSpeechSensitivity === 'medium' ? 'START_SENSITIVITY_MEDIUM' : 'START_SENSITIVITY_LOW',
-                endSpeechSensitivity: config.endSpeechSensitivity === 'default' ? 'END_SENSITIVITY_UNSPECIFIED' : config.endSpeechSensitivity === 'high' ? 'END_SENSITIVITY_HIGH' : config.endSpeechSensitivity === 'medium' ? 'END_SENSITIVITY_MEDIUM' : 'END_SENSITIVITY_LOW',
-                ttsEngine: config.ttsEngine,
-                ttsVoice: config.ttsVoice,
-                ttsRate: config.ttsRate,
-                ttsPitch: config.ttsPitch,
-                googleGrounding: config.googleGrounding,
-                sessionHandle: sessionHandleRef.current,
-            });
-
-            clientRef.current.on('content', handleMessage);
-            clientRef.current.on('open', () => {
-                setConnected(true);
-                setConnecting(false);
-            });
-            clientRef.current.on('close', () => {
-                setConnected(false);
-                setConnecting(false);
-                // Media streams are intentionally NOT cleaned up here.
-                // They persist independently and are re-attached on reconnect.
-            });
-            clientRef.current.on('error', (err: any) => {
-                console.error("Adapter Error:", err);
-                setConnecting(false);
-            });
-
-            // Setup Tools
-            const tools = [];
-            const functionDecls = [];
-            const activeTools: Record<string, any> = {};
-
-            if (config.googleGrounding) {
-                tools.push({ googleSearch: {} });
-            }
-
-
-            // ... Add other tools
-
-            if (functionDecls.length > 0) {
-                tools.push({ functionDeclarations: functionDecls });
-            }
-            activeToolsMapRef.current = activeTools;
-            clientRef.current.setTools(tools);
-
-            const success = await clientRef.current.connect();
-            if (success) {
-                // Init Audio Player
-                if (!audioPlayerRef.current) {
-                    audioPlayerRef.current = new AudioPlayer();
-                }
-                await audioPlayerRef.current.init();
-
-                // Initialize Streamers
-                // We don't start them yet, just prep
-            } else {
-                setConnecting(false);
-            }
-
-        } catch (e) {
-            console.error(e);
-            setConnecting(false);
-        }
-    };
-
-    const cleanupMedia = async () => {
-        if (audioStreamerRef.current) {
-            try { await audioStreamerRef.current.stop(); } catch (e) { console.error("Error stopping audio:", e); }
-        }
-        if (videoStreamerRef.current) {
-            try { await videoStreamerRef.current.stop(); } catch (e) { console.error("Error stopping video:", e); }
-        }
-        if (screenCaptureRef.current) {
-            try { await screenCaptureRef.current.stop(); } catch (e) { console.error("Error stopping screen:", e); }
-        }
-        audioStreamerRef.current = null;
-        videoStreamerRef.current = null;
-        screenCaptureRef.current = null;
-        screenSharingRef.current = false;
-        setAudioStreaming(false);
-        setVideoStreaming(false);
-        setScreenSharing(false);
-        setVideoStream(null);
-        setCameraStream(null);
-    };
-
-    const disconnect = async () => {
-        if (clientRef.current) clientRef.current.disconnect();
-        await cleanupMedia();
-        // Clear canvas drawings
-        document.dispatchEvent(new Event('STAGE_CLEAR'));
-        setConnected(false);
-        setConnecting(false);
-    };
-
-    const sendMessage = (text: string, config: AppConfig) => {
-        if (clientRef.current) {
-            addMessage(text, 'user', true);
-
-            let imageBase64 = null;
-
-            // Capture image if streaming
-            try {
-                if (screenSharing && screenCaptureRef.current) {
-                    imageBase64 = screenCaptureRef.current.takeSnapshot().split(',')[1];
-                } else if (videoStreaming && videoStreamerRef.current) {
-                    imageBase64 = videoStreamerRef.current.takeSnapshot().split(',')[1];
-                }
-            } catch (e) {
-                console.error("Failed to capture snapshot for message:", e);
-            }
-
-            clientRef.current.sendText(text, imageBase64);
-            // Reset proactive timer since user just interacted
-            scheduleNextProactive();
-        }
-    };
-
-    // Toggle Functions
-    const toggleAudio = async (enabled: boolean, micId: string, config: AppConfig) => {
-        if (enabled) {
-            // Always create a fresh AudioStreamer to avoid stale AudioContext issues
-            if (clientRef.current) {
-                audioStreamerRef.current = new AudioStreamer(clientRef.current);
-            }
-            if (audioStreamerRef.current) {
-                audioStreamerRef.current.vadEnabled = config.enableVAD;
-                audioStreamerRef.current.vadSpeechHoldTime = config.silenceDuration;
-
-                // Hook up VAD status to control video transmission
-                audioStreamerRef.current.onSpeechStatusChange = (isSpeaking: boolean) => {
-                    isSpeakingRef.current = isSpeaking;
-
-                    if (isSpeaking) {
-                        lastUserSpeechTimeRef.current = Date.now();
-                        // Reset proactive timer when user speaks
-                        scheduleNextProactive();
-                    }
-
-                    if (config.enableVAD) {
-                        const isScreenActive = screenSharingRef.current;
-                        if (videoStreamerRef.current) {
-                            // Only transmit camera frames if it's the main view (screenSharing is false)
-                            videoStreamerRef.current.transmitFrames = isSpeaking && !isScreenActive;
-                        }
-                        if (screenCaptureRef.current) {
-                            // Only transmit screen frames if screen sharing is active
-                            screenCaptureRef.current.transmitFrames = isSpeaking && isScreenActive;
-                        }
-                    }
-                };
-
-                try {
-                    await audioStreamerRef.current.start(micId === 'default' ? undefined : micId);
-                    setAudioStreaming(true);
-                } catch (e) {
-                    console.error('Failed to start audio:', e);
-                    audioStreamerRef.current = null;
-                }
-            }
-        } else {
-            if (audioStreamerRef.current) {
-                await audioStreamerRef.current.stop();
-                audioStreamerRef.current = null; // Ensure fresh instance next time
-            }
-            setAudioStreaming(false);
-        }
-    };
-
-    const toggleVideo = async (enabled: boolean, camId: string, config: AppConfig) => {
-        try {
-            if (enabled) {
-                if (!videoStreamerRef.current && clientRef.current) {
-                    videoStreamerRef.current = new VideoStreamer(clientRef.current);
-                } else if (videoStreamerRef.current && clientRef.current) {
-                    // Ensure client reference is current (may have changed after reconnect)
-                    videoStreamerRef.current.setClient(clientRef.current);
-                }
-                if (videoStreamerRef.current) {
-                    const video = await videoStreamerRef.current.start({
-                        deviceId: camId === 'default' ? undefined : camId
-                    });
-
-                    // Apply overlay if available
-                    if (overlayCanvasRef.current && videoStreamerRef.current) {
-                        videoStreamerRef.current.setOverlayCanvas(overlayCanvasRef.current);
-                    }
-
-                    // Configure Video Transmission Strategy
-                    if (videoStreamerRef.current) {
-                        // Only always-transmit if VAD disabled AND it's the main view
-                        videoStreamerRef.current.alwaysTransmit = !config.enableVAD && !screenSharingRef.current;
-                        if (config.enableVAD) {
-                            // Immediately sync with current VAD speaking state
-                            videoStreamerRef.current.transmitFrames = isSpeakingRef.current && !screenSharingRef.current;
-                        }
-                    }
-
-                    setCameraStream(video.srcObject);
-
-                    // If screen sharing is NOT active, update the main video stream
-                    // If screen sharing IS active, we start the camera in background but don't show it 
-                    // (except maybe in a PiP which is handled by UI, but here 'videoStream' implies the main view)
-                    if (!screenSharingRef.current) {
-                        setVideoStream(video.srcObject);
-                    }
-                    setVideoStreaming(true);
-                }
-            } else {
-                if (videoStreamerRef.current) await videoStreamerRef.current.stop();
-                setVideoStreaming(false);
-                setCameraStream(null);
-                if (!screenSharingRef.current) setVideoStream(null);
-            }
-        } catch (error) {
-            console.error("Error toggling video:", error);
-            setVideoStreaming(false);
-        }
-    };
-
-    const toggleScreen = async (enabled: boolean, config: AppConfig, screenAudio?: boolean) => {
-        try {
-            if (enabled) {
-                if (!screenCaptureRef.current && clientRef.current) {
-                    screenCaptureRef.current = new ScreenCapture(clientRef.current);
-                } else if (screenCaptureRef.current && clientRef.current) {
-                    // Ensure client reference is current (may have changed after reconnect)
-                    screenCaptureRef.current.setClient(clientRef.current);
-                }
-                if (screenCaptureRef.current) {
-                    const video = await screenCaptureRef.current.start({
-                        audio: screenAudio
-                    });
-                    screenSharingRef.current = true;
-                    setScreenSharing(true);
-
-                    // Apply overlay if available
-                    if (overlayCanvasRef.current && screenCaptureRef.current) {
-                        screenCaptureRef.current.setOverlayCanvas(overlayCanvasRef.current);
-                    }
-
-                    // Configure Screen Transmission Strategy
-                    if (screenCaptureRef.current) {
-                        // Screen takes priority if active
-                        screenCaptureRef.current.alwaysTransmit = !config.enableVAD;
-                        if (config.enableVAD) {
-                            // Immediately sync with current VAD speaking state
-                            screenCaptureRef.current.transmitFrames = isSpeakingRef.current;
-                        }
-                    }
-
-                    // Turn OFF camera transmission since screen is now active
-                    if (videoStreamerRef.current) {
-                        videoStreamerRef.current.alwaysTransmit = false;
-                        videoStreamerRef.current.transmitFrames = false;
-                    }
-
-                    // If Camera was already streaming, we move it to background (in UI)
-                    // We update main videoStream to be the screen share
-                    setVideoStream(video.srcObject);
-                }
-            } else {
-                if (screenCaptureRef.current) await screenCaptureRef.current.stop();
-                screenSharingRef.current = false;
-                setScreenSharing(false);
-
-                // Revert to camera if active
-                if (videoStreaming && videoStreamerRef.current) {
-                    // Restore camera transmission
-                    videoStreamerRef.current.alwaysTransmit = !config.enableVAD;
-                    videoStreamerRef.current.transmitFrames = config.enableVAD ? isSpeakingRef.current : false;
-
-                    // Check if the video streamer still has an active stream
-                    const cameraVideo = videoStreamerRef.current.getVideoElement();
-                    if (cameraVideo && cameraVideo.srcObject) {
-                        setVideoStream(cameraVideo.srcObject);
-                    } else {
-                        // Should potentially restart or handle error, but usually it stays active
-                        setVideoStream(null);
-                    }
-                } else {
-                    setVideoStream(null);
-                }
-            }
-        } catch (error) {
-            console.error("Error toggling screen share:", error);
-            screenSharingRef.current = false;
-            setScreenSharing(false);
-        }
-    };
-
-    const setOverlayCanvas = (canvas: HTMLCanvasElement | null) => {
-        overlayCanvasRef.current = canvas;
-        if (videoStreamerRef.current) {
-            videoStreamerRef.current.setOverlayCanvas(canvas);
-        }
-        if (screenCaptureRef.current) {
-            screenCaptureRef.current.setOverlayCanvas(canvas);
-        }
-    };
+    }, [addMessage, scheduleNextProactive]);
 
     const setConfig = useCallback(async (configUpdate: Partial<AppConfig>) => {
         if (!clientRef.current || !latestConfigRef.current) return;
@@ -676,8 +348,342 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             // For Flash/REST API, just update config in-place
             clientRef.current.updateConfig(configUpdate);
         }
-    }, [connected]);
+    }, [connected, handleMessage]);
 
+    // Update setConfigRef
+    useEffect(() => {
+        setConfigRef.current = setConfig;
+    }, [setConfig]);
+
+    const connect = useCallback(async (config: AppConfig) => {
+        if (connecting || connected) return;
+        setConnecting(true);
+        latestConfigRef.current = config;
+
+        try {
+            // Re-create client
+            const modelDef = MODEL_REGISTRY[config.provider];
+            const adapterType = modelDef?.protocol === 'websocket' ? 'live' : 'flash';
+
+            // If switching away from Live API, clear the session handle constraints
+            if (adapterType !== 'live') {
+                sessionHandleRef.current = null;
+            }
+
+            clientRef.current = ModelClient.createAdapter(adapterType, {
+                apiKey: config.apiKey,
+                modelId: config.modelId,
+                voice: config.voice,
+                systemInstruction: config.systemInstructions,
+                temperature: config.temperature,
+                topP: config.topP,
+                topK: config.topK,
+                thinkingBudget: config.thinkingBudget,
+                affectiveDialog: config.affectiveDialog,
+                inputTranscription: config.inputTranscription,
+                outputTranscription: config.outputTranscription,
+                enableVAD: config.enableVAD,
+                silenceDuration: config.silenceDuration,
+                prefixPadding: config.prefixPadding,
+                startSpeechSensitivity: config.startSpeechSensitivity === 'default' ? 'START_SENSITIVITY_UNSPECIFIED' : config.startSpeechSensitivity === 'high' ? 'START_SENSITIVITY_HIGH' : config.startSpeechSensitivity === 'medium' ? 'START_SENSITIVITY_MEDIUM' : 'START_SENSITIVITY_LOW',
+                endSpeechSensitivity: config.endSpeechSensitivity === 'default' ? 'END_SENSITIVITY_UNSPECIFIED' : config.endSpeechSensitivity === 'high' ? 'END_SENSITIVITY_HIGH' : config.endSpeechSensitivity === 'medium' ? 'END_SENSITIVITY_MEDIUM' : 'END_SENSITIVITY_LOW',
+                ttsEngine: config.ttsEngine,
+                ttsVoice: config.ttsVoice,
+                ttsRate: config.ttsRate,
+                ttsPitch: config.ttsPitch,
+                googleGrounding: config.googleGrounding,
+                sessionHandle: sessionHandleRef.current,
+            });
+
+            clientRef.current.on('content', handleMessage);
+            clientRef.current.on('open', () => {
+                setConnected(true);
+                setConnecting(false);
+            });
+            clientRef.current.on('close', () => {
+                setConnected(false);
+                setConnecting(false);
+                // Media streams are intentionally NOT cleaned up here.
+                // They persist independently and are re-attached on reconnect.
+            });
+            clientRef.current.on('error', (err: any) => {
+                console.error("Adapter Error:", err);
+                setConnecting(false);
+            });
+
+            // Setup Tools
+            const tools = [];
+            const functionDecls = [];
+            const activeTools: Record<string, any> = {};
+
+            if (config.googleGrounding) {
+                tools.push({ googleSearch: {} });
+            }
+
+
+            // ... Add other tools
+
+            if (functionDecls.length > 0) {
+                tools.push({ functionDeclarations: functionDecls });
+            }
+            activeToolsMapRef.current = activeTools;
+            clientRef.current.setTools(tools);
+
+            const success = await clientRef.current.connect();
+            if (success) {
+                // Init Audio Player
+                if (!audioPlayerRef.current) {
+                    audioPlayerRef.current = new AudioPlayer();
+                }
+                await audioPlayerRef.current.init();
+
+                // Initialize Streamers
+                // We don't start them yet, just prep
+            } else {
+                setConnecting(false);
+            }
+
+        } catch (e) {
+            console.error(e);
+            setConnecting(false);
+        }
+    }, [connecting, connected, handleMessage]);
+
+    const cleanupMedia = useCallback(async () => {
+        if (audioStreamerRef.current) {
+            try { await audioStreamerRef.current.stop(); } catch (e) { console.error("Error stopping audio:", e); }
+        }
+        if (videoStreamerRef.current) {
+            try { await videoStreamerRef.current.stop(); } catch (e) { console.error("Error stopping video:", e); }
+        }
+        if (screenCaptureRef.current) {
+            try { await screenCaptureRef.current.stop(); } catch (e) { console.error("Error stopping screen:", e); }
+        }
+        audioStreamerRef.current = null;
+        videoStreamerRef.current = null;
+        screenCaptureRef.current = null;
+        screenSharingRef.current = false;
+        setAudioStreaming(false);
+        setVideoStreaming(false);
+        setScreenSharing(false);
+        setVideoStream(null);
+        setCameraStream(null);
+    }, []);
+
+    const disconnect = useCallback(async () => {
+        if (clientRef.current) clientRef.current.disconnect();
+        await cleanupMedia();
+        // Clear canvas drawings
+        document.dispatchEvent(new Event('STAGE_CLEAR'));
+        setConnected(false);
+        setConnecting(false);
+    }, [cleanupMedia]);
+
+    const sendMessage = useCallback((text: string, config: AppConfig) => {
+        if (clientRef.current) {
+            addMessage(text, 'user', true);
+
+            let imageBase64 = null;
+
+            // Capture image if streaming
+            try {
+                if (screenSharing && screenCaptureRef.current) {
+                    imageBase64 = screenCaptureRef.current.takeSnapshot().split(',')[1];
+                } else if (videoStreaming && videoStreamerRef.current) {
+                    imageBase64 = videoStreamerRef.current.takeSnapshot().split(',')[1];
+                }
+            } catch (e) {
+                console.error("Failed to capture snapshot for message:", e);
+            }
+
+            clientRef.current.sendText(text, imageBase64);
+            // Reset proactive timer since user just interacted
+            scheduleNextProactive();
+        }
+    }, [addMessage, scheduleNextProactive, screenSharing, videoStreaming]);
+
+    // Toggle Functions
+    const toggleAudio = useCallback(async (enabled: boolean, micId: string, config: AppConfig) => {
+        if (enabled) {
+            // Always create a fresh AudioStreamer to avoid stale AudioContext issues
+            if (clientRef.current) {
+                audioStreamerRef.current = new AudioStreamer(clientRef.current);
+            }
+            if (audioStreamerRef.current) {
+                audioStreamerRef.current.vadEnabled = config.enableVAD;
+                audioStreamerRef.current.vadSpeechHoldTime = config.silenceDuration;
+
+                // Hook up VAD status to control video transmission
+                audioStreamerRef.current.onSpeechStatusChange = (isSpeaking: boolean) => {
+                    isSpeakingRef.current = isSpeaking;
+
+                    if (isSpeaking) {
+                        lastUserSpeechTimeRef.current = Date.now();
+                        // Reset proactive timer when user speaks
+                        scheduleNextProactive();
+                    }
+
+                    if (config.enableVAD) {
+                        const isScreenActive = screenSharingRef.current;
+                        if (videoStreamerRef.current) {
+                            // Only transmit camera frames if it's the main view (screenSharing is false)
+                            videoStreamerRef.current.transmitFrames = isSpeaking && !isScreenActive;
+                        }
+                        if (screenCaptureRef.current) {
+                            // Only transmit screen frames if screen sharing is active
+                            screenCaptureRef.current.transmitFrames = isSpeaking && isScreenActive;
+                        }
+                    }
+                };
+
+                try {
+                    await audioStreamerRef.current.start(micId === 'default' ? undefined : micId);
+                    setAudioStreaming(true);
+                } catch (e) {
+                    console.error('Failed to start audio:', e);
+                    audioStreamerRef.current = null;
+                }
+            }
+        } else {
+            if (audioStreamerRef.current) {
+                await audioStreamerRef.current.stop();
+                audioStreamerRef.current = null; // Ensure fresh instance next time
+            }
+            setAudioStreaming(false);
+        }
+    }, [scheduleNextProactive]);
+
+    const toggleVideo = useCallback(async (enabled: boolean, camId: string, config: AppConfig) => {
+        try {
+            if (enabled) {
+                if (!videoStreamerRef.current && clientRef.current) {
+                    videoStreamerRef.current = new VideoStreamer(clientRef.current);
+                } else if (videoStreamerRef.current && clientRef.current) {
+                    // Ensure client reference is current (may have changed after reconnect)
+                    videoStreamerRef.current.setClient(clientRef.current);
+                }
+                if (videoStreamerRef.current) {
+                    const video = await videoStreamerRef.current.start({
+                        deviceId: camId === 'default' ? undefined : camId
+                    });
+
+                    // Apply overlay if available
+                    if (overlayCanvasRef.current && videoStreamerRef.current) {
+                        videoStreamerRef.current.setOverlayCanvas(overlayCanvasRef.current);
+                    }
+
+                    // Configure Video Transmission Strategy
+                    if (videoStreamerRef.current) {
+                        // Only always-transmit if VAD disabled AND it's the main view
+                        videoStreamerRef.current.alwaysTransmit = !config.enableVAD && !screenSharingRef.current;
+                        if (config.enableVAD) {
+                            // Immediately sync with current VAD speaking state
+                            videoStreamerRef.current.transmitFrames = isSpeakingRef.current && !screenSharingRef.current;
+                        }
+                    }
+
+                    setCameraStream(video.srcObject);
+
+                    // If screen sharing is NOT active, update the main video stream
+                    // If screen sharing IS active, we start the camera in background but don't show it 
+                    // (except maybe in a PiP which is handled by UI, but here 'videoStream' implies the main view)
+                    if (!screenSharingRef.current) {
+                        setVideoStream(video.srcObject);
+                    }
+                    setVideoStreaming(true);
+                }
+            } else {
+                if (videoStreamerRef.current) await videoStreamerRef.current.stop();
+                setVideoStreaming(false);
+                setCameraStream(null);
+                if (!screenSharingRef.current) setVideoStream(null);
+            }
+        } catch (error) {
+            console.error("Error toggling video:", error);
+            setVideoStreaming(false);
+        }
+    }, []);
+
+    const toggleScreen = useCallback(async (enabled: boolean, config: AppConfig, screenAudio?: boolean) => {
+        try {
+            if (enabled) {
+                if (!screenCaptureRef.current && clientRef.current) {
+                    screenCaptureRef.current = new ScreenCapture(clientRef.current);
+                } else if (screenCaptureRef.current && clientRef.current) {
+                    // Ensure client reference is current (may have changed after reconnect)
+                    screenCaptureRef.current.setClient(clientRef.current);
+                }
+                if (screenCaptureRef.current) {
+                    const video = await screenCaptureRef.current.start({
+                        audio: screenAudio
+                    });
+                    screenSharingRef.current = true;
+                    setScreenSharing(true);
+
+                    // Apply overlay if available
+                    if (overlayCanvasRef.current && screenCaptureRef.current) {
+                        screenCaptureRef.current.setOverlayCanvas(overlayCanvasRef.current);
+                    }
+
+                    // Configure Screen Transmission Strategy
+                    if (screenCaptureRef.current) {
+                        // Screen takes priority if active
+                        screenCaptureRef.current.alwaysTransmit = !config.enableVAD;
+                        if (config.enableVAD) {
+                            // Immediately sync with current VAD speaking state
+                            screenCaptureRef.current.transmitFrames = isSpeakingRef.current;
+                        }
+                    }
+
+                    // Turn OFF camera transmission since screen is now active
+                    if (videoStreamerRef.current) {
+                        videoStreamerRef.current.alwaysTransmit = false;
+                        videoStreamerRef.current.transmitFrames = false;
+                    }
+
+                    // If Camera was already streaming, we move it to background (in UI)
+                    // We update main videoStream to be the screen share
+                    setVideoStream(video.srcObject);
+                }
+            } else {
+                if (screenCaptureRef.current) await screenCaptureRef.current.stop();
+                screenSharingRef.current = false;
+                setScreenSharing(false);
+
+                // Revert to camera if active
+                if (videoStreaming && videoStreamerRef.current) {
+                    // Restore camera transmission
+                    videoStreamerRef.current.alwaysTransmit = !config.enableVAD;
+                    videoStreamerRef.current.transmitFrames = config.enableVAD ? isSpeakingRef.current : false;
+
+                    // Check if the video streamer still has an active stream
+                    const cameraVideo = videoStreamerRef.current.getVideoElement();
+                    if (cameraVideo && cameraVideo.srcObject) {
+                        setVideoStream(cameraVideo.srcObject);
+                    } else {
+                        // Should potentially restart or handle error, but usually it stays active
+                        setVideoStream(null);
+                    }
+                } else {
+                    setVideoStream(null);
+                }
+            }
+        } catch (error) {
+            console.error("Error toggling screen share:", error);
+            screenSharingRef.current = false;
+            setScreenSharing(false);
+        }
+    }, [videoStreaming]);
+
+    const setOverlayCanvas = useCallback((canvas: HTMLCanvasElement | null) => {
+        overlayCanvasRef.current = canvas;
+        if (videoStreamerRef.current) {
+            videoStreamerRef.current.setOverlayCanvas(canvas);
+        }
+        if (screenCaptureRef.current) {
+            screenCaptureRef.current.setOverlayCanvas(canvas);
+        }
+    }, []);
 
     const contextValue = useMemo(() => ({
         connected,
