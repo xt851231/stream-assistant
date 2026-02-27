@@ -16,6 +16,8 @@ test('Components should contain accessibility attributes for form fields', () =>
     const chatSidebarContent = fs.readFileSync(path.join(rootDir, 'components', 'ChatSidebar.tsx'), 'utf8');
     assert.ok(chatSidebarContent.includes('id="chat-message-input"'), 'ChatSidebar.tsx is missing chat input id');
     assert.ok(chatSidebarContent.includes('aria-label="Chat message input"'), 'ChatSidebar.tsx is missing chat input aria-label');
+    assert.ok(chatSidebarContent.includes('aria-label="Close Chat"'), 'ChatSidebar.tsx is missing close button aria-label');
+    assert.ok(chatSidebarContent.includes('aria-label="Send message"'), 'ChatSidebar.tsx is missing send button aria-label');
 
     const mediaHubContent = fs.readFileSync(path.join(rootDir, 'components', 'MediaControlHub.tsx'), 'utf8');
     assert.ok(mediaHubContent.includes('id="microphone-select"'), 'MediaControlHub.tsx is missing mic input id');
