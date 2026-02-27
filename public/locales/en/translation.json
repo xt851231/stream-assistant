@@ -1,0 +1,99 @@
+{
+    "appearance": {
+        "title": "Appearance",
+        "background": "Background",
+        "imageUrl": "Image URL",
+        "imageUrlHelper": "Leave empty for default animated background",
+        "backgroundBlur": "Background Blur",
+        "startScreen": "Start Screen",
+        "assetUrl": "Asset URL (Image/Video)",
+        "enableAudio": "Enable Audio (Video Only)",
+        "elementOpacity": "Element Opacity",
+        "language": "Language",
+        "done": "Done"
+    },
+    "mediaControl": {
+        "connect": "Connect",
+        "disconnect": "Disconnect",
+        "micOn": "Mute Microphone",
+        "micOff": "Unmute Microphone",
+        "camOn": "Turn Off Camera",
+        "camOff": "Turn On Camera",
+        "screenOn": "Stop Screen Sharing",
+        "screenOff": "Share Screen",
+        "settings": "Settings",
+        "volumeAi": "AI Volume",
+        "volumeSystem": "System Volume",
+        "screenAudio": "Share System Audio",
+        "mediaControls": "Media Controls",
+        "mediaHub": "Media Hub",
+        "microphone": "Microphone",
+        "noMics": "No microphones detected",
+        "camera": "Camera",
+        "noCameras": "No cameras detected",
+        "outputDevice": "Output Device"
+    },
+    "toolbelt": {
+        "tools": "TOOLS",
+        "pen": "Pen Tool",
+        "eraser": "Eraser Tool",
+        "clear": "Clear Canvas",
+        "size": "SIZE",
+        "brushSize": "Brush Size",
+        "palette": "PALETTE",
+        "color": "Select Color"
+    },
+    "languages": {
+        "en": "English",
+        "zh-CN": "简体中文",
+        "zh-TW": "繁體中文",
+        "ja": "日本語"
+    },
+    "systemConfig": {
+        "title": "System",
+        "globalSettings": "Global Settings",
+        "provider": "Provider",
+        "modelMode": "Model Mode",
+        "sections": {
+            "Connection": "Connection",
+            "Behavior": "Behavior",
+            "Features": "Features",
+            "Client VAD": "Client VAD",
+            "Reasoning": "Reasoning",
+            "Server VAD (Gemini Live)": "Server VAD (Gemini Live)"
+        },
+        "fields": {
+            "apiKey": "API Key",
+            "modelId": "Model ID",
+            "systemInstructions": "System Instructions",
+            "voice": "Voice",
+            "temperature": "Temperature",
+            "topP": "Top P",
+            "topK": "Top K",
+            "thinkingBudget": "Thinking Budget",
+            "proactiveAudio": "Proactive Audio",
+            "proactiveAudioInterval": "Proactive Interval (ms)",
+            "affectiveDialog": "Affective Dialog",
+            "inputTranscription": "Input Transcription",
+            "outputTranscription": "Output Transcription",
+            "googleGrounding": "Google Grounding",
+            "ttsEngine": "TTS Engine",
+            "ttsVoice": "TTS Voice",
+            "ttsRate": "TTS Rate",
+            "ttsPitch": "TTS Pitch",
+            "enableVAD": "Enable Client VAD",
+            "silenceDuration": "Silence Duration (ms)",
+            "prefixPadding": "Prefix Padding (ms)",
+            "startSpeechSensitivity": "Start Sensitivity",
+            "endSpeechSensitivity": "End Sensitivity"
+        },
+        "options": {
+            "gemini": "Gemini (Native)",
+            "browser": "Browser (Web Speech)",
+            "default": "Default",
+            "low": "Low",
+            "medium": "Medium",
+            "high": "High"
+        }
+    }
+}

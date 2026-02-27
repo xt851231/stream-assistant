@@ -4,6 +4,7 @@ import { MediaConfig, ThemeConfig } from '../types';
 import { Mic, Video, Monitor, Volume2, Settings2, Gamepad2 } from 'lucide-react';
 import { SpeechAudioContext } from '../lib/utils/SpeechAudioContext';
 import { getBgColor } from '../lib/utils/style-utils';
+import { useTranslation } from 'react-i18next';
 
 interface MediaControlHubProps {
     isOpen: boolean;
@@ -25,6 +26,7 @@ interface DeviceInfo {
 }
 
 const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onConfigChange, onClose, themeConfig, onToggleAudio, onToggleVideo, onToggleScreen, isPortrait, containerRef, triggerRef }) => {
+    const { t } = useTranslation();
     const [microphones, setMicrophones] = useState<DeviceInfo[]>([]);
     const [cameras, setCameras] = useState<DeviceInfo[]>([]);
     const [speakers, setSpeakers] = useState<DeviceInfo[]>([]);
@@ -148,7 +150,7 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
     const menuContent = (
         <aside
             ref={panelRef}
-            aria-label="Media Controls"
+            aria-label={t('mediaControl.mediaControls', 'Media Controls')}
             role="dialog"
             data-component="MediaControlHub"
             className={isPortrait
@@ -163,7 +165,7 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
         >
             <header className="bg-blue-900 border-b-2 border-white p-2 flex items-center gap-2">
                 <Settings2 className="text-[#ffd700]" size={16} />
-                <h2 className="font-pixel text-[10px] text-white">Media Hub</h2>
+                <h2 className="font-pixel text-[10px] text-white">{t('mediaControl.mediaHub', 'Media Hub')}</h2>
             </header>
 
             <div
@@ -179,18 +181,18 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 text-xs text-gray-300">
                             <Mic size={12} className="text-blue-400" />
-                            <span>Microphone</span>
+                            <span>{t('mediaControl.microphone', 'Microphone')}</span>
                         </div>
                         <select
                             id="microphone-select"
                             name="microphone"
-                            aria-label="Microphone"
+                            aria-label={t('mediaControl.microphone', 'Microphone')}
                             className="w-full bg-[#162032] border border-gray-600 text-white text-xs rounded p-1.5 outline-none focus:border-blue-500"
                             value={config.microphoneId}
                             onChange={(e) => handleChange('microphoneId', e.target.value)}
                         >
                             {microphones.length === 0 ? (
-                                <option value="default">No microphones detected</option>
+                                <option value="default">{t('mediaControl.noMics', 'No microphones detected')}</option>
                             ) : (
                                 microphones.map(mic => (
                                     <option key={mic.deviceId} value={mic.deviceId}>
@@ -204,18 +206,18 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 text-xs text-gray-300">
                             <Video size={12} className="text-blue-400" />
-                            <span>Camera</span>
+                            <span>{t('mediaControl.camera', 'Camera')}</span>
                         </div>
                         <select
                             id="camera-select"
                             name="camera"
-                            aria-label="Camera"
+                            aria-label={t('mediaControl.camera', 'Camera')}
                             className="w-full bg-[#162032] border border-gray-600 text-white text-xs rounded p-1.5 outline-none focus:border-blue-500"
                             value={config.cameraId}
                             onChange={(e) => handleChange('cameraId', e.target.value)}
                         >
                             {cameras.length === 0 ? (
-                                <option value="default">No cameras detected</option>
+                                <option value="default">{t('mediaControl.noCameras', 'No cameras detected')}</option>
                             ) : (
                                 cameras.map(cam => (
                                     <option key={cam.deviceId} value={cam.deviceId}>
@@ -235,7 +237,7 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         }}
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.audioEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
-                        title="Toggle Microphone"
+                        title={config.audioEnabled ? t('mediaControl.micOn', 'Mute Microphone') : t('mediaControl.micOff', 'Unmute Microphone')}
                     >
                         <Mic size={16} />
                         <span className="text-[9px] mt-1 font-bold">MIC</span>
@@ -246,7 +248,7 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         }}
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.videoEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
-                        title="Toggle Camera"
+                        title={config.videoEnabled ? t('mediaControl.camOn', 'Turn Off Camera') : t('mediaControl.camOff', 'Turn On Camera')}
                     >
                         <Video size={16} />
                         <span className="text-[9px] mt-1 font-bold">CAM</span>
@@ -257,7 +259,7 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         }}
                         className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.screenShareEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
-                        title="Toggle Screen Share"
+                        title={config.screenShareEnabled ? t('mediaControl.screenOn', 'Stop Screen Sharing') : t('mediaControl.screenOff', 'Share Screen')}
                     >
                         <Monitor size={16} />
                         <span className="text-[9px] mt-1 font-bold">SCREEN</span>
@@ -268,7 +270,7 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                 <div className="flex items-center justify-between bg-[#111827] p-2 rounded border border-gray-700">
                     <div className="flex items-center gap-2 text-xs text-gray-300">
                         <Gamepad2 size={14} className="text-blue-400" />
-                        <span>Capture Game Audio</span>
+                        <span>{t('mediaControl.screenAudio', 'Share System Audio')}</span>
                     </div>
                     <button
                         onClick={() => handleChange('screenAudio', !config.screenAudio)}
@@ -282,12 +284,12 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                 <div className="space-y-1 pt-2 border-t border-gray-700">
                     <div className="flex items-center gap-2 text-xs text-gray-300">
                         <Volume2 size={12} className="text-blue-400" />
-                        <span>Output Device</span>
+                        <span>{t('mediaControl.outputDevice', 'Output Device')}</span>
                     </div>
                     <select
                         id="speaker-select"
                         name="speaker"
-                        aria-label="Speaker"
+                        aria-label={t('mediaControl.outputDevice', 'Output Device')}
                         className="w-full bg-[#162032] border border-gray-600 text-white text-xs rounded p-1.5 outline-none focus:border-blue-500"
                         value={config.audioOutputDevice || 'default'}
                         onChange={(e) => handleChange('audioOutputDevice', e.target.value)}
@@ -314,14 +316,14 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         <div className="flex items-center justify-between text-xs text-gray-300">
                             <div className="flex items-center gap-2">
                                 <Volume2 size={12} className="text-blue-400" />
-                                <span>AI Voice Volume</span>
+                                <span>{t('mediaControl.volumeAi', 'AI Volume')}</span>
                             </div>
                             <span className="font-mono text-[#ffd700]">{config.aiVolume}%</span>
                         </div>
                         <input
                             id="ai-volume-slider"
                             name="aiVolume"
-                            aria-label="AI Voice Volume"
+                            aria-label={t('mediaControl.volumeAi', 'AI Voice Volume')}
                             type="range"
                             min="0" max="100"
                             value={config.aiVolume}
@@ -335,14 +337,14 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         <div className="flex items-center justify-between text-xs text-gray-300">
                             <div className="flex items-center gap-2">
                                 <Gamepad2 size={12} className="text-blue-400" />
-                                <span>Game Audio Volume</span>
+                                <span>{t('mediaControl.volumeSystem', 'System Volume')}</span>
                             </div>
                             <span className="font-mono text-[#ffd700]">{config.systemVolume}%</span>
                         </div>
                         <input
                             id="game-volume-slider"
                             name="gameVolume"
-                            aria-label="Game Audio Volume"
+                            aria-label={t('mediaControl.volumeSystem', 'Game Audio Volume')}
                             type="range"
                             min="0" max="100"
                             value={config.systemVolume}

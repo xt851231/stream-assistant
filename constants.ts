@@ -26,6 +26,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     ttsVoice: 'Puck',
     ttsRate: 1.0,
     ttsPitch: 1.0,
+    language: 'en',
 };
 
 export const DEFAULT_MEDIA_CONFIG: MediaConfig = {
@@ -127,3 +128,10 @@ export function getPersonaVoiceForModel(persona: Persona, provider: string): Per
 export const VOICES = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'];
 
 export const INITIAL_MESSAGES = [];
+
+export const SUPPORTED_LANGUAGES = [
+    { code: 'en', label: 'English' },
+    { code: 'zh-CN', label: '简体中文' },
+    { code: 'zh-TW', label: '繁體中文' },
+    { code: 'ja', label: '日本語' }
+];

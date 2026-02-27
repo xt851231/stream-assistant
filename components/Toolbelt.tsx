@@ -2,6 +2,7 @@ import React from 'react';
 import { Pen, Eraser, Pipette, Trash2 } from 'lucide-react';
 import { ThemeConfig } from '../types';
 import { getBgColor } from '../lib/utils/style-utils';
+import { useTranslation } from 'react-i18next';
 
 interface ToolbeltProps {
     tool: 'pen' | 'eraser';
@@ -26,6 +27,8 @@ const COLOR_NAMES: Record<string, string> = {
 const SIZES = [2, 4, 8, 12];
 
 const Toolbelt: React.FC<ToolbeltProps> = React.memo(({ tool, setTool, color, setColor, brushSize, setBrushSize, onClear, themeConfig, isPortrait }) => {
+    const { t } = useTranslation();
+
     return (
         <section
             aria-label="Toolbelt"
@@ -36,13 +39,13 @@ const Toolbelt: React.FC<ToolbeltProps> = React.memo(({ tool, setTool, color, se
                 backdropFilter: themeConfig.backgroundImage ? `blur(${themeConfig.blur / 2}px)` : 'none'
             }}
         >
-            <div className="text-[8px] text-gray-500 font-pixel mr-2">TOOLS</div>
+            <div className="text-[8px] text-gray-500 font-pixel mr-2">{t('toolbelt.tools', 'TOOLS')}</div>
 
             <div className={`flex gap-2 items-center shrink-0 ${!isPortrait ? 'mr-6 border-r-2 border-gray-600 pr-6' : ''}`}>
                 <button
                     onClick={() => setTool('pen')}
-                    aria-label="Pen Tool"
-                    title="Pen Tool"
+                    aria-label={t('toolbelt.pen', 'Pen Tool')}
+                    title={t('toolbelt.pen', 'Pen Tool')}
                     aria-pressed={tool === 'pen'}
                     className={`group relative size-8 rounded flex items-center justify-center transition-transform hover:scale-105 ${tool === 'pen' ? 'bg-[#2b6cee] border-2 border-[#ffd700]' : 'bg-[#1e293b] border-2 border-gray-600'}`}
                 >
@@ -50,8 +53,8 @@ const Toolbelt: React.FC<ToolbeltProps> = React.memo(({ tool, setTool, color, se
                 </button>
                 <button
                     onClick={() => setTool('eraser')}
-                    aria-label="Eraser Tool"
-                    title="Eraser Tool"
+                    aria-label={t('toolbelt.eraser', 'Eraser Tool')}
+                    title={t('toolbelt.eraser', 'Eraser Tool')}
                     aria-pressed={tool === 'eraser'}
                     className={`group relative size-8 rounded flex items-center justify-center transition-transform hover:scale-105 ${tool === 'eraser' ? 'bg-[#2b6cee] border-2 border-[#ffd700]' : 'bg-[#1e293b] border-2 border-gray-600'}`}
                 >
@@ -59,9 +62,9 @@ const Toolbelt: React.FC<ToolbeltProps> = React.memo(({ tool, setTool, color, se
                 </button>
                 <button
                     onClick={onClear}
-                    aria-label="Clear Canvas"
+                    aria-label={t('toolbelt.clear', 'Clear Canvas')}
                     className="group relative size-8 bg-[#1e293b] border-2 border-gray-600 hover:border-red-500 rounded flex items-center justify-center hover:scale-105 transition-transform"
-                    title="Clear Canvas"
+                    title={t('toolbelt.clear', 'Clear Canvas')}
                 >
                     <Trash2 size={14} className="text-gray-400 group-hover:text-red-500" />
                 </button>
@@ -71,13 +74,13 @@ const Toolbelt: React.FC<ToolbeltProps> = React.memo(({ tool, setTool, color, se
             {!isPortrait && (
                 <>
                     <div className="flex gap-3 items-center border-r-2 border-gray-600 pr-6 mr-6 shrink-0">
-                        <div className="text-[8px] text-gray-500 font-pixel mr-1">SIZE</div>
+                        <div className="text-[8px] text-gray-500 font-pixel mr-1">{t('toolbelt.size', 'SIZE')}</div>
                         {SIZES.map(size => (
                             <button
                                 key={size}
                                 onClick={() => setBrushSize(size)}
-                                aria-label={`Brush Size ${size}px`}
-                                title={`Brush Size ${size}px`}
+                                aria-label={`${t('toolbelt.brushSize', 'Brush Size')} ${size}px`}
+                                title={`${t('toolbelt.brushSize', 'Brush Size')} ${size}px`}
                                 aria-pressed={brushSize === size}
                                 className={`rounded-full bg-gray-400 hover:bg-white transition-all ${brushSize === size ? 'bg-white ring-2 ring-[#ffd700]' : ''}`}
                                 style={{ width: Math.max(8, size * 1.5), height: Math.max(8, size * 1.5) }}
@@ -86,13 +89,13 @@ const Toolbelt: React.FC<ToolbeltProps> = React.memo(({ tool, setTool, color, se
                     </div>
 
                     <div className="flex gap-3 items-center shrink-0">
-                        <div className="text-[8px] text-gray-500 font-pixel mr-1">PALETTE</div>
+                        <div className="text-[8px] text-gray-500 font-pixel mr-1">{t('toolbelt.palette', 'PALETTE')}</div>
                         {COLORS.map(c => (
                             <button
                                 key={c}
                                 onClick={() => { setColor(c); setTool('pen'); }}
-                                aria-label={`Select Color ${COLOR_NAMES[c] || c}`}
-                                title={`Select Color ${COLOR_NAMES[c] || c}`}
+                                aria-label={`${t('toolbelt.color', 'Select Color')} ${COLOR_NAMES[c] || c}`}
+                                title={`${t('toolbelt.color', 'Select Color')} ${COLOR_NAMES[c] || c}`}
                                 aria-pressed={color === c}
                                 className={`size-6 rounded-full border-2 transition-transform hover:scale-110 shadow-sm ${color === c ? 'border-white scale-110 ring-2 ring-gray-400' : 'border-gray-600'}`}
                                 style={{ backgroundColor: c }}

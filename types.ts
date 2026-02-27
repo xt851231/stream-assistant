@@ -58,6 +58,9 @@ export interface AppConfig {
     ttsVoice: string;
     ttsRate: number;
     ttsPitch: number;
+
+    // Localization
+    language: string;
 }
 
 export interface ThemeConfig {
