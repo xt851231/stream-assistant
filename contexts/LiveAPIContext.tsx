@@ -103,7 +103,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     }, [connected, scheduleNextProactive]);
 
     // Helper to add messages
-    const addMessage = (text: string, type: 'user' | 'assistant' | 'system' | 'user-transcript', isFinished: boolean = false) => {
+    const addMessage = useCallback((text: string, type: 'user' | 'assistant' | 'system' | 'user-transcript', isFinished: boolean = false) => {
         setMessages(prev => {
             // Logic to append to last message if it's the same type and not finished
             // Simplified for now, logic ported from LiveAPIDemo
@@ -144,9 +144,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             messagesRef.current = newMessages;
             return newMessages;
         });
-    };
+    }, []);
 
-    const handleMessage = (message: any) => {
+    const handleMessage = useCallback((message: any) => {
         switch (message.type) {
             case 'text':
                 isModelRespondingRef.current = true;
@@ -242,9 +242,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 addMessage(`Error: ${message.data}`, 'system', true);
                 break;
         }
-    };
+    }, [addMessage, setConfig, scheduleNextProactive]);
 
-    const connect = async (config: AppConfig) => {
+    const connect = useCallback(async (config: AppConfig) => {
         if (connecting || connected) return;
         setConnecting(true);
         latestConfigRef.current = config;
@@ -336,9 +336,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             console.error(e);
             setConnecting(false);
         }
-    };
+    }, [connecting, connected, handleMessage]);
 
-    const cleanupMedia = async () => {
+    const cleanupMedia = useCallback(async () => {
         if (audioStreamerRef.current) {
             try { await audioStreamerRef.current.stop(); } catch (e) { console.error("Error stopping audio:", e); }
         }
@@ -357,18 +357,18 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         setScreenSharing(false);
         setVideoStream(null);
         setCameraStream(null);
-    };
+    }, []);
 
-    const disconnect = async () => {
+    const disconnect = useCallback(async () => {
         if (clientRef.current) clientRef.current.disconnect();
         await cleanupMedia();
         // Clear canvas drawings
         document.dispatchEvent(new Event('STAGE_CLEAR'));
         setConnected(false);
         setConnecting(false);
-    };
+    }, [cleanupMedia]);
 
-    const sendMessage = (text: string, config: AppConfig) => {
+    const sendMessage = useCallback((text: string, config: AppConfig) => {
         if (clientRef.current) {
             addMessage(text, 'user', true);
 
@@ -389,10 +389,10 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             // Reset proactive timer since user just interacted
             scheduleNextProactive();
         }
-    };
+    }, [addMessage, screenSharing, videoStreaming, scheduleNextProactive]);
 
     // Toggle Functions
-    const toggleAudio = async (enabled: boolean, micId: string, config: AppConfig) => {
+    const toggleAudio = useCallback(async (enabled: boolean, micId: string, config: AppConfig) => {
         if (enabled) {
             // Always create a fresh AudioStreamer to avoid stale AudioContext issues
             if (clientRef.current) {
@@ -440,9 +440,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             }
             setAudioStreaming(false);
         }
-    };
+    }, [scheduleNextProactive]);
 
-    const toggleVideo = async (enabled: boolean, camId: string, config: AppConfig) => {
+    const toggleVideo = useCallback(async (enabled: boolean, camId: string, config: AppConfig) => {
         try {
             if (enabled) {
                 if (!videoStreamerRef.current && clientRef.current) {
@@ -491,9 +491,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             console.error("Error toggling video:", error);
             setVideoStreaming(false);
         }
-    };
+    }, [videoStreaming]);
 
-    const toggleScreen = async (enabled: boolean, config: AppConfig, screenAudio?: boolean) => {
+    const toggleScreen = useCallback(async (enabled: boolean, config: AppConfig, screenAudio?: boolean) => {
         try {
             if (enabled) {
                 if (!screenCaptureRef.current && clientRef.current) {
@@ -562,9 +562,9 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             screenSharingRef.current = false;
             setScreenSharing(false);
         }
-    };
+    }, [videoStreaming]);
 
-    const setOverlayCanvas = (canvas: HTMLCanvasElement | null) => {
+    const setOverlayCanvas = useCallback((canvas: HTMLCanvasElement | null) => {
         overlayCanvasRef.current = canvas;
         if (videoStreamerRef.current) {
             videoStreamerRef.current.setOverlayCanvas(canvas);
@@ -572,7 +572,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (screenCaptureRef.current) {
             screenCaptureRef.current.setOverlayCanvas(canvas);
         }
-    };
+    }, []);
 
     const setConfig = useCallback(async (configUpdate: Partial<AppConfig>) => {
         if (!clientRef.current || !latestConfigRef.current) return;
