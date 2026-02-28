@@ -1,0 +1,3 @@
+## 2024-05-24 - Icon-Only Button Accessibility
+**Learning:** Icon-only buttons in complex toolbars (like the main navigation app header) often miss descriptive `aria-label` or `title` attributes, making them opaque to screen readers despite having visual icons. State-toggling buttons also require `aria-pressed` or `aria-expanded` attributes to communicate their current state.
+**Action:** When adding new icon buttons, always mandate the inclusion of `aria-label` and the appropriate state attribute (`aria-pressed` for toggles, `aria-expanded` for menus).
