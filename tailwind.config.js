@@ -18,7 +18,8 @@ export default {
                 "rpg-slate": "#232f48",
             },
             fontFamily: {
-                "display": ["Space Grotesk", "sans-serif"],
+                "sans": ['"Ark Pixel"', "sans-serif"],
+                "display": ['"Ark Pixel"', "sans-serif"],
                 "pixel": ['"Ark Pixel"', '"Press Start 2P"', '"DotGothic16"', "cursive"],
             },
             boxShadow: {
