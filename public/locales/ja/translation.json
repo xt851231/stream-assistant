@@ -1,0 +1,99 @@
+{
+    "appearance": {
+        "title": "外観",
+        "background": "背景",
+        "imageUrl": "画像 URL",
+        "imageUrlHelper": "デフォルトのアニメーション背景を使用する場合は空のままにしてください",
+        "backgroundBlur": "背景のぼかし",
+        "startScreen": "スタート画面",
+        "assetUrl": "アセット URL (画像/動画)",
+        "enableAudio": "オーディオを有効にする (動画のみ)",
+        "elementOpacity": "要素の不透明度",
+        "language": "言語",
+        "done": "完了"
+    },
+    "mediaControl": {
+        "connect": "接続",
+        "disconnect": "切断",
+        "micOn": "マイクをミュート",
+        "micOff": "マイクのミュート解除",
+        "camOn": "カメラをオフにする",
+        "camOff": "カメラをオンにする",
+        "screenOn": "画面共有を停止",
+        "screenOff": "画面を共有",
+        "settings": "設定",
+        "volumeAi": "AI 音量",
+        "volumeSystem": "システム音量",
+        "screenAudio": "システム音声を共有",
+        "mediaControls": "メディアコントロール",
+        "mediaHub": "メディアハブ",
+        "microphone": "マイク",
+        "noMics": "マイクが検出されません",
+        "camera": "カメラ",
+        "noCameras": "カメラが検出されません",
+        "outputDevice": "出力デバイス"
+    },
+    "toolbelt": {
+        "tools": "ツール",
+        "pen": "ペンツール",
+        "eraser": "消しゴム",
+        "clear": "キャンバスをクリア",
+        "size": "サイズ",
+        "brushSize": "ブラシサイズ",
+        "palette": "パレット",
+        "color": "色を選択"
+    },
+    "languages": {
+        "en": "English",
+        "zh-CN": "简体中文",
+        "zh-TW": "繁體中文",
+        "ja": "日本語"
+    },
+    "systemConfig": {
+        "title": "システム",
+        "globalSettings": "グローバル設定",
+        "provider": "プロバイダー",
+        "modelMode": "モデルモード",
+        "sections": {
+            "Connection": "接続",
+            "Behavior": "動作",
+            "Features": "機能",
+            "Client VAD": "クライアント VAD",
+            "Reasoning": "推論",
+            "Server VAD (Gemini Live)": "サーバー VAD (Gemini Live)"
+        },
+        "fields": {
+            "apiKey": "API キー",
+            "modelId": "モデル ID",
+            "systemInstructions": "システムプロンプト",
+            "voice": "音声",
+            "temperature": "温度",
+            "topP": "Top P",
+            "topK": "Top K",
+            "thinkingBudget": "思考バジェット",
+            "proactiveAudio": "プロアクティブオーディオ",
+            "proactiveAudioInterval": "プロアクティブ間隔 (ミリ秒)",
+            "affectiveDialog": "感情ダイアログ",
+            "inputTranscription": "入力書き起こし",
+            "outputTranscription": "出力書き起こし",
+            "googleGrounding": "Google グラウンディング",
+            "ttsEngine": "TTS エンジン",
+            "ttsVoice": "TTS 音声",
+            "ttsRate": "TTS 速度",
+            "ttsPitch": "TTS ピッチ",
+            "enableVAD": "クライアント VAD を有効化",
+            "silenceDuration": "無音検出期間 (ミリ秒)",
+            "prefixPadding": "プレフィックスパティング (ミリ秒)",
+            "startSpeechSensitivity": "開始感度",
+            "endSpeechSensitivity": "終了感度"
+        },
+        "options": {
+            "gemini": "Gemini (ネイティブ)",
+            "browser": "ブラウザ (Web Speech)",
+            "default": "デフォルト",
+            "low": "低",
+            "medium": "中",
+            "high": "高"
+        }
+    }
+}

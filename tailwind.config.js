@@ -19,7 +19,7 @@ export default {
             },
             fontFamily: {
                 "display": ["Space Grotesk", "sans-serif"],
-                "pixel": ['"Press Start 2P"', "cursive"],
+                "pixel": ['"Press Start 2P"', '"DotGothic16"', "cursive"],
             },
             boxShadow: {
                 "pixel": "4px 4px 0px 0px rgba(0,0,0,0.5)",

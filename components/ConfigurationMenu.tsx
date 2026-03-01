@@ -2,8 +2,9 @@ import React, { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AppConfig, ThemeConfig } from '../types';
 import { MODEL_REGISTRY, PROVIDERS, FIELD_DEFINITIONS, PERSONAS, VOICES, getEffectiveSettings, saveModelConfig, loadModelConfig } from '../utils/model-registry';
-import { getPersonaVoiceForModel } from '../constants';
+import { getPersonaVoiceForModel, SUPPORTED_LANGUAGES } from '../constants';
 import { Cpu, Activity, Save, Image, Settings, Sparkles, Brain, Mic } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { getBgColor } from '../lib/utils/style-utils';
 
 interface ConfigurationMenuProps {
@@ -19,6 +20,7 @@ interface ConfigurationMenuProps {
 }
 
 const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, onConfigChange, themeConfig, onThemeConfigChange, onClose, triggerRef, isPortrait, containerRef }) => {
+    const { t } = useTranslation();
     const currentModelId = config.provider && MODEL_REGISTRY[config.provider] ? config.provider : 'gemini-live';
     const currentModel = MODEL_REGISTRY[currentModelId];
 
@@ -184,7 +186,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
         }
     };
 
-    const tabs = [...currentModel.uiGroups, { id: 'appearance', label: 'Appearance', icon: 'image' }];
+    const tabs = [...currentModel.uiGroups, { id: 'appearance', label: t('appearance.title', 'Appearance'), icon: 'image' }];
 
     // Helper to render a list of settings
     const renderSettingsList = (settings: string[]) => {
@@ -218,7 +220,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
             return (
                 <div key={settingId} className="space-y-1">
                     <div className="flex justify-between items-center">
-                        <label className="text-xs text-gray-400 font-display uppercase tracking-wider">{field.label}</label>
+                        <label className="text-xs text-gray-400 font-display uppercase tracking-wider">{t(`systemConfig.fields.${settingId}`, field.label)}</label>
                         {field.type === 'slider' && (
                             <span className="text-[#ffd700] font-mono text-xs">{config[settingId as keyof AppConfig]}</span>
                         )}
@@ -238,7 +240,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                     <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>
                                 ))
                             ) : field.options?.map((opt: any) => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                <option key={opt.value} value={opt.value}>{t(`systemConfig.options.${opt.value}`, opt.label)}</option>
                             ))}
                         </select>
                     ) : field.type === 'textarea' ? (
@@ -254,7 +256,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                         />
                     ) : field.type === 'checkbox' ? (
                         <div className="flex items-center justify-between bg-[#162032] p-2 rounded border border-gray-700">
-                            <span className="text-xs text-gray-300">{field.label}</span>
+                            <span className="text-xs text-gray-300">{t(`systemConfig.fields.${settingId}`, field.label)}</span>
                             <button
                                 onClick={() => handleChange(settingId as keyof AppConfig, !config[settingId as keyof AppConfig])}
                                 className={`w-8 h-4 rounded-full relative transition-colors ${config[settingId as keyof AppConfig] ? 'bg-green-500' : 'bg-gray-600'}`}
@@ -317,7 +319,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                             }`}
                     >
                         {tab.id === 'appearance' ? <Image size={14} /> : renderIcon(tab.icon || 'settings')}
-                        {tab.label}
+                        {tab.id === 'system' ? t('systemConfig.title', tab.label) : tab.label}
                     </button>
                 ))}
             </nav>
@@ -329,11 +331,11 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                         {(activeTab === 'system' || activeTab === currentModel.uiGroups[0].id) && (
                             <section className="space-y-3 bg-[#111827] p-3 rounded-lg border border-gray-700">
                                 <h3 className="text-[#ffd700] font-pixel text-[10px] uppercase mb-2 border-b border-gray-700 pb-1">
-                                    Global Settings
+                                    {t('systemConfig.globalSettings', 'Global Settings')}
                                 </h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
-                                        <label className="text-xs text-gray-400 font-display uppercase tracking-wider">Provider</label>
+                                        <label className="text-xs text-gray-400 font-display uppercase tracking-wider">{t('systemConfig.provider', 'Provider')}</label>
                                         <select
                                             id="global-provider-select"
                                             name="provider"
@@ -352,7 +354,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                         </select>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-xs text-gray-400 font-display uppercase tracking-wider">Model Mode</label>
+                                        <label className="text-xs text-gray-400 font-display uppercase tracking-wider">{t('systemConfig.modelMode', 'Model Mode')}</label>
                                         <select
                                             id="global-model-select"
                                             name="modelId"
@@ -384,7 +386,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                     return (
                                         <section key={idx} className="space-y-3">
                                             <h3 className="text-[#ffd700] font-pixel text-[10px] uppercase mb-2 border-b border-gray-700 pb-1">
-                                                {section.title}
+                                                {t(`systemConfig.sections.${section.title}`, section.title)}
                                             </h3>
                                             {renderSettingsList(effectiveSettings)}
                                         </section>
@@ -404,10 +406,31 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                     <div className="space-y-6">
                         <section className="space-y-3">
                             <h3 className="text-[#ffd700] font-pixel text-[10px] uppercase mb-2 border-b border-gray-700 pb-1">
-                                Background
+                                {t('appearance.language', 'Language')}
                             </h3>
                             <div className="space-y-1">
-                                <label className="text-xs text-gray-400 font-display uppercase tracking-wider">Image URL</label>
+                                <label className="text-xs text-gray-400 font-display uppercase tracking-wider">{t('appearance.language', 'Language')}</label>
+                                <select
+                                    id="appearance-language-select"
+                                    name="language"
+                                    aria-label="Language Select"
+                                    className="w-full bg-[#162032] border border-gray-600 text-white text-sm rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
+                                    value={config.language || 'en'}
+                                    onChange={(e) => handleChange('language', e.target.value)}
+                                >
+                                    {SUPPORTED_LANGUAGES.map((lang) => (
+                                        <option key={lang.code} value={lang.code}>{lang.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </section>
+
+                        <section className="space-y-3">
+                            <h3 className="text-[#ffd700] font-pixel text-[10px] uppercase mb-2 border-b border-gray-700 pb-1">
+                                {t('appearance.background', 'Background')}
+                            </h3>
+                            <div className="space-y-1">
+                                <label className="text-xs text-gray-400 font-display uppercase tracking-wider">{t('appearance.imageUrl', 'Image URL')}</label>
                                 <input
                                     id="appearance-bg-image"
                                     name="backgroundImage"
@@ -418,11 +441,11 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                     value={themeConfig?.backgroundImage ?? ''}
                                     onChange={(e) => onThemeConfigChange?.({ ...themeConfig!, backgroundImage: e.target.value })}
                                 />
-                                <p className="text-[10px] text-gray-500">Leave empty for default animated background</p>
+                                <p className="text-[10px] text-gray-500">{t('appearance.imageUrlHelper', 'Leave empty for default animated background')}</p>
                             </div>
                             <div>
                                 <div className="flex justify-between text-xs mb-1">
-                                    <span className="text-gray-300">Background Blur</span>
+                                    <span className="text-gray-300">{t('appearance.backgroundBlur', 'Background Blur')}</span>
                                     <span className="text-[#ffd700] font-mono">{themeConfig?.blur}px</span>
                                 </div>
                                 <input
@@ -440,10 +463,10 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
 
                         <section className="space-y-3">
                             <h3 className="text-[#ffd700] font-pixel text-[10px] uppercase mb-2 border-b border-gray-700 pb-1">
-                                Start Screen
+                                {t('appearance.startScreen', 'Start Screen')}
                             </h3>
                             <div className="space-y-1">
-                                <label className="text-xs text-gray-400 font-display uppercase tracking-wider">Asset URL (Image/Video)</label>
+                                <label className="text-xs text-gray-400 font-display uppercase tracking-wider">{t('appearance.assetUrl', 'Asset URL (Image/Video)')}</label>
                                 <input
                                     id="appearance-asset-url"
                                     name="startScreenUrl"
@@ -459,7 +482,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                 />
                             </div>
                             <div className="flex items-center justify-between bg-[#162032] p-2 rounded border border-gray-700">
-                                <span className="text-xs text-gray-300">Enable Audio (Video Only)</span>
+                                <span className="text-xs text-gray-300">{t('appearance.enableAudio', 'Enable Audio (Video Only)')}</span>
                                 <button
                                     onClick={() => onThemeConfigChange?.({
                                         ...themeConfig!,
@@ -474,7 +497,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
 
                         <section className="space-y-3">
                             <h3 className="text-[#ffd700] font-pixel text-[10px] uppercase mb-2 border-b border-gray-700 pb-1">
-                                Element Opacity
+                                {t('appearance.elementOpacity', 'Element Opacity')}
                             </h3>
                             <div className="grid grid-cols-1 gap-4">
                                 {Object.entries(themeConfig?.opacity || {}).map(([key, value]) => {
@@ -514,7 +537,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                     className="flex items-center gap-2 px-4 py-2 bg-green-700 border-2 border-white text-white font-pixel text-[10px] uppercase hover:bg-green-600 transition-colors shadow-pixel-sm active:translate-y-0.5 active:shadow-none"
                 >
                     <Save size={14} />
-                    Done
+                    {t('appearance.done', 'Done')}
                 </button>
             </footer>
         </aside>,

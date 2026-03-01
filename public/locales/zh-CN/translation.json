@@ -1,0 +1,99 @@
+{
+    "appearance": {
+        "title": "外观",
+        "background": "背景",
+        "imageUrl": "图片 URL",
+        "imageUrlHelper": "留空以使用默认动画背景",
+        "backgroundBlur": "背景模糊",
+        "startScreen": "启动屏幕",
+        "assetUrl": "资源 URL（图片/视频）",
+        "enableAudio": "启用音频（仅限视频）",
+        "elementOpacity": "元素不透明度",
+        "language": "语言",
+        "done": "完成"
+    },
+    "mediaControl": {
+        "connect": "连接",
+        "disconnect": "断开",
+        "micOn": "静音麦克风",
+        "micOff": "取消静音麦克风",
+        "camOn": "关闭摄像头",
+        "camOff": "打开摄像头",
+        "screenOn": "停止屏幕共享",
+        "screenOff": "共享屏幕",
+        "settings": "设置",
+        "volumeAi": "AI 音量",
+        "volumeSystem": "系统音量",
+        "screenAudio": "共享系统音频",
+        "mediaControls": "媒体控制",
+        "mediaHub": "媒体中心",
+        "microphone": "麦克风",
+        "noMics": "未检测到麦克风",
+        "camera": "摄像头",
+        "noCameras": "未检测到摄像头",
+        "outputDevice": "输出设备"
+    },
+    "toolbelt": {
+        "tools": "工具",
+        "pen": "画笔工具",
+        "eraser": "橡皮擦",
+        "clear": "清除画布",
+        "size": "尺寸",
+        "brushSize": "画笔尺寸",
+        "palette": "调色板",
+        "color": "选择颜色"
+    },
+    "languages": {
+        "en": "English",
+        "zh-CN": "简体中文",
+        "zh-TW": "繁體中文",
+        "ja": "日本語"
+    },
+    "systemConfig": {
+        "title": "系统",
+        "globalSettings": "全局设置",
+        "provider": "提供商",
+        "modelMode": "模型模式",
+        "sections": {
+            "Connection": "连接",
+            "Behavior": "行为",
+            "Features": "功能",
+            "Client VAD": "客户端语音活动检测 (VAD)",
+            "Reasoning": "推理",
+            "Server VAD (Gemini Live)": "服务器语音活动检测 (Gemini Live)"
+        },
+        "fields": {
+            "apiKey": "API密钥",
+            "modelId": "模型ID",
+            "systemInstructions": "系统指令",
+            "voice": "声音",
+            "temperature": "温度",
+            "topP": "Top P",
+            "topK": "Top K",
+            "thinkingBudget": "思考预算",
+            "proactiveAudio": "主动音频",
+            "proactiveAudioInterval": "主动音频间隔 (毫秒)",
+            "affectiveDialog": "情感对话",
+            "inputTranscription": "输入转录",
+            "outputTranscription": "输出转录",
+            "googleGrounding": "Google搜索支持",
+            "ttsEngine": "TTS引擎",
+            "ttsVoice": "TTS声音",
+            "ttsRate": "TTS语速",
+            "ttsPitch": "TTS音调",
+            "enableVAD": "启用客户端VAD",
+            "silenceDuration": "静音检测时长 (毫秒)",
+            "prefixPadding": "前缀填充 (毫秒)",
+            "startSpeechSensitivity": "开始说话灵敏度",
+            "endSpeechSensitivity": "停止说话灵敏度"
+        },
+        "options": {
+            "gemini": "Gemini (原生)",
+            "browser": "浏览器 (Web Speech)",
+            "default": "默认",
+            "low": "低",
+            "medium": "中",
+            "high": "高"
+        }
+    }
+}

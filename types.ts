@@ -58,6 +58,9 @@ export interface AppConfig {
     ttsVoice: string;
     ttsRate: number;
     ttsPitch: number;
+
+    // Localization
+    language: string;
 }
 
 export interface ThemeConfig {
@@ -104,4 +107,5 @@ export interface MediaConfig {
     aiVolume: number;
     systemVolume: number;
     screenAudio: boolean;
+    audioOutputDevice: string;
 }

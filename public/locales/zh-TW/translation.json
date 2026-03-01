@@ -1,0 +1,99 @@
+{
+    "appearance": {
+        "title": "外觀",
+        "background": "背景",
+        "imageUrl": "圖片 URL",
+        "imageUrlHelper": "留空以使用預設動畫背景",
+        "backgroundBlur": "背景模糊",
+        "startScreen": "啟動螢幕",
+        "assetUrl": "資源 URL（圖片/影片）",
+        "enableAudio": "啟用音訊（僅限影片）",
+        "elementOpacity": "元素不透明度",
+        "language": "語言",
+        "done": "完成"
+    },
+    "mediaControl": {
+        "connect": "連接",
+        "disconnect": "斷開",
+        "micOn": "靜音麥克風",
+        "micOff": "取消靜音麥克風",
+        "camOn": "關閉攝影機",
+        "camOff": "開啟攝影機",
+        "screenOn": "停止螢幕分享",
+        "screenOff": "分享螢幕",
+        "settings": "設定",
+        "volumeAi": "AI 音量",
+        "volumeSystem": "系統音量",
+        "screenAudio": "分享系統音訊",
+        "mediaControls": "媒體控制",
+        "mediaHub": "媒體中心",
+        "microphone": "麥克風",
+        "noMics": "未檢測到麥克風",
+        "camera": "攝影機",
+        "noCameras": "未檢測到攝影機",
+        "outputDevice": "輸出裝置"
+    },
+    "toolbelt": {
+        "tools": "工具",
+        "pen": "畫筆工具",
+        "eraser": "橡皮擦",
+        "clear": "清除畫布",
+        "size": "尺寸",
+        "brushSize": "畫筆尺寸",
+        "palette": "調色盤",
+        "color": "選擇顏色"
+    },
+    "languages": {
+        "en": "English",
+        "zh-CN": "简体中文",
+        "zh-TW": "繁體中文",
+        "ja": "日本語"
+    },
+    "systemConfig": {
+        "title": "系統",
+        "globalSettings": "全域設定",
+        "provider": "提供商",
+        "modelMode": "模型模式",
+        "sections": {
+            "Connection": "連接",
+            "Behavior": "行為",
+            "Features": "功能",
+            "Client VAD": "客戶端語音活動檢測 (VAD)",
+            "Reasoning": "推理",
+            "Server VAD (Gemini Live)": "伺服器語音活動檢測 (Gemini Live)"
+        },
+        "fields": {
+            "apiKey": "API金鑰",
+            "modelId": "模型ID",
+            "systemInstructions": "系統指令",
+            "voice": "聲音",
+            "temperature": "溫度",
+            "topP": "Top P",
+            "topK": "Top K",
+            "thinkingBudget": "思考預算",
+            "proactiveAudio": "主動音訊",
+            "proactiveAudioInterval": "主動音訊間隔 (毫秒)",
+            "affectiveDialog": "情感對話",
+            "inputTranscription": "輸入轉錄",
+            "outputTranscription": "輸出轉錄",
+            "googleGrounding": "Google搜尋支援",
+            "ttsEngine": "TTS引擎",
+            "ttsVoice": "TTS聲音",
+            "ttsRate": "TTS語速",
+            "ttsPitch": "TTS音調",
+            "enableVAD": "啟用客戶端VAD",
+            "silenceDuration": "靜音檢測時長 (毫秒)",
+            "prefixPadding": "前綴填充 (毫秒)",
+            "startSpeechSensitivity": "開始說話靈敏度",
+            "endSpeechSensitivity": "停止說話靈敏度"
+        },
+        "options": {
+            "gemini": "Gemini (原生)",
+            "browser": "瀏覽器 (Web Speech)",
+            "default": "預設",
+            "low": "低",
+            "medium": "中",
+            "high": "高"
+        }
+    }
+}

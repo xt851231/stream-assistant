@@ -1144,3 +1144,70 @@ Removed the `onSpeechEnd()` method from `GeminiLiveAdapter.js`. This restores th
 - `contexts/LiveAPIContext.tsx`: Hardened connection lifecycle and history sync.
 - `tests/`: Integrated full suite of history and resumption tests.
 
+## [2026-02-25 23:45] Supported Virtual Cable Audio Routing via setSinkId
+
+**The Problem:**
+1. Capturing screen share audio and simultaneously playing game/AI audio through the default speakers resulted in an echo loop if the stream was being captured by software like OBS.
+2. The user wanted a way to route the dashboard's audio specifically to a "Virtual Audio Cable" to separate tracks in OBS without feedback loops.
+
+**Root Cause:**
+1. `SpeechAudioContext.js` hardcoded the audio destination to `audioContext.destination`, which always corresponds to the OS default audio output device.
+2. The application UI lacked a way to enumerate or select audio output devices (speakers).
+
+**The Solution:**
+1. Updated `MediaControlHub.tsx` to enumerate devices of `kind === 'audiooutput'` and display them in a new "Output Device" dropdown.
+2. Added `audioOutputDevice` to `MediaConfig` to store the user's selection, which persists across reloads via the existing storage mechanism.
+3. Enhanced the `SpeechAudioContext` singleton with a `setSinkId(deviceId)` method utilizing the modern `AudioContext.setSinkId` web API.
+4. Added a synchronization effect in the UI to instantly reroute the `audioContext` output to the selected Virtual Cable without requiring a context restart.
+
+**Key Changes:**
+- `types.ts` & `constants.ts`: Added `audioOutputDevice` configuration node.
+- `components/MediaControlHub.tsx`: Implemented speaker enumeration and selection UI.
+- `lib/utils/SpeechAudioContext.js`: Added `setSinkId` support.
+- `tests/audio_routing.test.js`: Added assertions to ensure `setSinkId` acts predictably and handles missing browser support gracefully.
+
+
+## [2026-02-27 21:12] Internationalization (i18n) Support
+* **The Problem**: The dashboard UI was hardcoded in English, and the user wanted to support multiple languages (en, zh-CN, zh-TW, ja) driven by configuration files.
+* **Root Cause**: The application lacked an i18n library and a way to store language preferences in the models configuration or UI state.
+* **The Solution**:
+    * Integrated `react-i18next`, `i18next`, `i18next-browser-languagedetector`, and `i18next-http-backend`.
+    * Created a central `src/i18n.ts` to coordinate fetching JSON translations dynamically from `public/locales/`.
+    * Added language bundles for `en`, `zh-CN`, `zh-TW`, and `ja` with initial text extracted from the settings and media controls.
+    * Expanded `AppConfig` in `types.ts` to include `language`, allowing language selection to be saved per-model.
+    * Injected a semantic `language` state effect loop in `App.tsx` via `i18n.changeLanguage(config.language)`.
+    * Added a "Language" `<select>` in the "Appearance" tab of `ConfigurationMenu.tsx`.
+    * Passed strings through the `useTranslation` hook (`t()`) in `ConfigurationMenu` and `MediaControlHub`.
+* **Key Changes**:
+    * `src/i18n.ts` (added)
+    * `public/locales/*/translation.json` (added language packs)
+    * `package.json` (added i18next dependencies)
+    * `index.tsx`, `App.tsx` (injected i18n and dynamic language switching)
+    * `constants.ts`, `types.ts` (added `language` and `SUPPORTED_LANGUAGES`)
+    * `components/ConfigurationMenu.tsx`, `components/MediaControlHub.tsx` (implemented UI hooks and selector)
+
+## [2026-02-27 21:28] Added CJK Pixel Font and System Tab Translations
+* **The Problem**: The user noticed that Chinese and Japanese characters were falling back to standard non-pixel sans-serif fonts, breaking the retro aesthetic. Additionally, the dynamically generated "System" tab in the Configuration Menu lacked translations because its fields were procedurally extracted from the Model Registry.
+* **Root Cause**: The default pixel font (`Press Start 2P`) had no internal mapping for CJK Unicode blocks. The System tab fields were rendered dynamically by mapping over JSON definitions instead of statically using translation keys.
+* **The Solution**:
+    * **Font Update**: Appended the Google Font `DotGothic16` to `index.html`. Added `'DotGothic16'` to the `fontFamily.pixel` stack in `tailwind.config.js` right behind `'Press Start 2P'` so it seamlessly falls back to pixel-art styling for Asian languages.
+    * **Dynamic Translations**: Added a `systemConfig` JSON tree to all 4 translation files (`en`, `zh-CN`, `zh-TW`, `ja`), mapping the dynamic field keys.
+    * **React UI Hook**: Updated `ConfigurationMenu.tsx` to wrap `field.label` and `opt.label` inside `t(\`systemConfig.fields.${settingId}\`)` and `t(\`systemConfig.options.${opt.value}\`)`.
+* **Key Changes**:
+    * `index.html`: Added `<link>` for `DotGothic16`.
+    * `tailwind.config.js`: Added `'DotGothic16'` to the fallback chain.
+    * `public/locales/*/translation.json`: Appended `systemConfig` dictionary with labels and options.
+    * `components/ConfigurationMenu.tsx`: Upgraded the render tree to map dynamically generated headers and inputs through `t()`.
+
+## [2026-02-27 21:40] Refined Translations and Local Font Hosting
+* **The Problem**: 1. "Google Grounding" (Google Search Grounding) was awkwardly translated as "Google 搜索接地" in Simplified Chinese. 2. `aria-label`s for icon buttons in `Toolbelt` and `MediaControlHub` were hardcoded in English, failing accessibility tests for international users. 3. `DotGothic16` was being fetched dynamically from Google Fonts CDN, which the user preferred to host locally for offline usage.
+* **Root Cause**: Literal translation of "Grounding" and overlooked accessibility attributes during the initial i18n pass.
+* **The Solution**: 
+    1. Researched official Google Cloud / Vertex AI simplified Chinese terminology for "Grounding" and updated the label to "Google 搜索支持" (zh-CN) and "Google 搜尋支援" (zh-TW).
+    2. Wrapped all `aria-label` strings (e.g. "Microphone", "Clear Canvas", "Pen Tool") in `t()` using the `useTranslation` hook across `MediaControlHub` and `Toolbelt`, and added their translated values into `translation.json`.
+    3. Removed the `fonts.googleapis.com` CDN `<link>` for `DotGothic16` in `index.html` and instead installed `@fontsource/dotgothic16`, importing it at the very top of `index.tsx` so the CSS bundles it directly into the dashboard build.
+* **Key Changes**:
+    * `public/locales/*/translation.json`: Added `toolbelt` translations and `mediaControl` aria-labels. Fixed `googleGrounding` string.
+    * `components/Toolbelt.tsx` & `components/MediaControlHub.tsx`: Integrated `t()` hooks for accessibility attributes.
+    * `index.html`: Removed `DotGothic16` parameters from Google Fonts link.
+    * `index.tsx`: Added `import '@fontsource/dotgothic16';`

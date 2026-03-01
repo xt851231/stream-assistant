@@ -11,8 +11,10 @@ import ChatSidebar from './components/ChatSidebar';
 import { useLiveAPI } from './hooks/useLiveAPI';
 import { Swords, Zap, Settings, Video, MessageSquare, Smartphone } from 'lucide-react';
 import { getBgColor } from './lib/utils/style-utils';
+import { useTranslation } from 'react-i18next';
 
 const App: React.FC = () => {
+    const { i18n } = useTranslation();
     // Context
     const {
         connected,
@@ -71,6 +73,12 @@ const App: React.FC = () => {
     React.useEffect(() => {
         saveModelConfig(config);
     }, [config]);
+
+    React.useEffect(() => {
+        if (config.language && i18n.language !== config.language) {
+            i18n.changeLanguage(config.language);
+        }
+    }, [config.language, i18n]);
 
     React.useEffect(() => {
         localStorage.setItem('media_config', JSON.stringify(mediaConfig));
