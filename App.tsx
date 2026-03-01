@@ -148,7 +148,7 @@ const App: React.FC = () => {
     // Derived State
     const connectionState: ConnectionState = connected ? 'connected' : connecting ? 'connecting' : 'disconnected';
 
-    const [gameTitle, setGameTitle] = useState('bigger better sue');
+    const [gameTitle, setGameTitle] = useState(() => localStorage.getItem('gameTitle') || 'Stream Quest');
 
     // UI Toggles
     const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -393,7 +393,7 @@ const App: React.FC = () => {
                                                 aria-label="Currently Playing Game Title"
                                                 type="text"
                                                 value={gameTitle}
-                                                onChange={(e) => setGameTitle(e.target.value)}
+                                                onChange={(e) => { setGameTitle(e.target.value); localStorage.setItem('gameTitle', e.target.value); }}
                                                 className="font-pixel text-lg text-white tracking-widest bg-transparent border-b-2 border-transparent hover:border-white/20 focus:border-[#ffd700] outline-none transition-colors w-full h-8"
                                             />
                                         </div>
