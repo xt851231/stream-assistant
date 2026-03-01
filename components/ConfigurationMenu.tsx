@@ -206,7 +206,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                         }`}
                                 >
                                     <span className="text-2xl mb-1">{persona.emoji}</span>
-                                    <span className="text-xs font-ark font-bold text-gray-300">{persona.name}</span>
+                                    <span className="text-xs font-pixel font-bold text-gray-300">{persona.name}</span>
                                 </button>
                             ))}
                         </div>
@@ -220,9 +220,9 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
             return (
                 <div key={settingId} className="space-y-1">
                     <div className="flex justify-between items-center">
-                        <label className="text-xs text-gray-400 font-ark uppercase tracking-wider">{t(`systemConfig.fields.${settingId}`, field.label)}</label>
+                        <label className="text-xs text-gray-400 font-pixel uppercase tracking-wider">{t(`systemConfig.fields.${settingId}`, field.label)}</label>
                         {field.type === 'slider' && (
-                            <span className="text-[#ffd700] font-ark text-xs">{config[settingId as keyof AppConfig]}</span>
+                            <span className="text-[#ffd700] font-pixel text-xs">{config[settingId as keyof AppConfig]}</span>
                         )}
                     </div>
 
@@ -231,7 +231,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                             id={`config-select-${settingId}`}
                             name={settingId}
                             aria-label={field.label}
-                            className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-ark rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
+                            className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-pixel rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                             value={String(config[settingId as keyof AppConfig] || '')}
                             onChange={(e) => handleChange(settingId as keyof AppConfig, e.target.value)}
                         >
@@ -249,14 +249,14 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                             name={settingId}
                             aria-label={field.label}
                             rows={field.rows || 3}
-                            className="w-full bg-[#162032] border border-gray-600 text-white text-xs rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none resize-none font-ark"
+                            className="w-full bg-[#162032] border border-gray-600 text-white text-xs rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none resize-none font-pixel"
                             value={String(config[settingId as keyof AppConfig] || '')}
                             onChange={(e) => handleChange(settingId as keyof AppConfig, e.target.value)}
                             placeholder={field.placeholder}
                         />
                     ) : field.type === 'checkbox' ? (
                         <div className="flex items-center justify-between bg-[#162032] p-2 rounded border border-gray-700">
-                            <span className="text-xs text-gray-300 font-ark">{t(`systemConfig.fields.${settingId}`, field.label)}</span>
+                            <span className="text-xs text-gray-300 font-pixel">{t(`systemConfig.fields.${settingId}`, field.label)}</span>
                             <button
                                 onClick={() => handleChange(settingId as keyof AppConfig, !config[settingId as keyof AppConfig])}
                                 className={`w-8 h-4 rounded-full relative transition-colors ${config[settingId as keyof AppConfig] ? 'bg-green-500' : 'bg-gray-600'}`}
@@ -313,7 +313,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 font-ark text-[16px] transition-colors whitespace-nowrap ${activeTab === tab.id
+                        className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 font-pixel text-xs transition-colors whitespace-nowrap ${activeTab === tab.id
                             ? 'bg-[#2b6cee] text-white'
                             : 'bg-[#1e3a8a] text-gray-400 hover:text-white'
                             }`}
@@ -330,17 +330,17 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                         {/* Global Provider Select - Visible on 'system' or first tab */}
                         {(activeTab === 'system' || activeTab === currentModel.uiGroups[0].id) && (
                             <section className="space-y-3 bg-[#111827] p-3 rounded-lg border border-gray-700">
-                                <h3 className="text-[#ffd700] font-ark text-xs uppercase mb-2 border-b border-gray-700 pb-1">
+                                <h3 className="text-[#ffd700] font-pixel text-xs uppercase mb-2 border-b border-gray-700 pb-1">
                                     {t('systemConfig.globalSettings', 'Global Settings')}
                                 </h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
-                                        <label className="text-xs text-gray-400 font-ark uppercase tracking-wider">{t('systemConfig.provider', 'Provider')}</label>
+                                        <label className="text-xs text-gray-400 font-pixel uppercase tracking-wider">{t('systemConfig.provider', 'Provider')}</label>
                                         <select
                                             id="global-provider-select"
                                             name="provider"
                                             aria-label="Provider"
-                                            className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-ark rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
+                                            className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-pixel rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                                             value={currentModel.providerId}
                                             onChange={(e) => {
                                                 const newProviderId = e.target.value;
@@ -354,12 +354,12 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                         </select>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-xs text-gray-400 font-ark uppercase tracking-wider">{t('systemConfig.modelMode', 'Model Mode')}</label>
+                                        <label className="text-xs text-gray-400 font-pixel uppercase tracking-wider">{t('systemConfig.modelMode', 'Model Mode')}</label>
                                         <select
                                             id="global-model-select"
                                             name="modelId"
                                             aria-label="Model Mode"
-                                            className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-ark rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
+                                            className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-pixel rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                                             value={currentModelId}
                                             onChange={(e) => handleModelChange(e.target.value)}
                                         >
@@ -385,7 +385,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                     const effectiveSettings = getEffectiveSettings(currentModel.requiresTTS ?? false, section.settings);
                                     return (
                                         <section key={idx} className="space-y-3">
-                                            <h3 className="text-[#ffd700] font-ark text-xs uppercase mb-2 border-b border-gray-700 pb-1">
+                                            <h3 className="text-[#ffd700] font-pixel text-xs uppercase mb-2 border-b border-gray-700 pb-1">
                                                 {t(`systemConfig.sections.${section.title}`, section.title)}
                                             </h3>
                                             {renderSettingsList(effectiveSettings)}
@@ -405,16 +405,16 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                 {activeTab === 'appearance' && (
                     <div className="space-y-6">
                         <section className="space-y-3">
-                            <h3 className="text-[#ffd700] font-ark text-xs uppercase mb-2 border-b border-gray-700 pb-1">
+                            <h3 className="text-[#ffd700] font-pixel text-xs uppercase mb-2 border-b border-gray-700 pb-1">
                                 {t('appearance.language', 'Language')}
                             </h3>
                             <div className="space-y-1">
-                                <label className="text-xs text-gray-400 font-ark uppercase tracking-wider">{t('appearance.language', 'Language')}</label>
+                                <label className="text-xs text-gray-400 font-pixel uppercase tracking-wider">{t('appearance.language', 'Language')}</label>
                                 <select
                                     id="appearance-language-select"
                                     name="language"
                                     aria-label="Language Select"
-                                    className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-ark rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
+                                    className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-pixel rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                                     value={config.language || 'en'}
                                     onChange={(e) => handleChange('language', e.target.value)}
                                 >
@@ -426,25 +426,25 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                         </section>
 
                         <section className="space-y-3">
-                            <h3 className="text-[#ffd700] font-ark text-xs uppercase mb-2 border-b border-gray-700 pb-1">
+                            <h3 className="text-[#ffd700] font-pixel text-xs uppercase mb-2 border-b border-gray-700 pb-1">
                                 {t('appearance.background', 'Background')}
                             </h3>
                             <div className="space-y-1">
-                                <label className="text-xs text-gray-400 font-ark uppercase tracking-wider">{t('appearance.imageUrl', 'Image URL')}</label>
+                                <label className="text-xs text-gray-400 font-pixel uppercase tracking-wider">{t('appearance.imageUrl', 'Image URL')}</label>
                                 <input
                                     id="appearance-bg-image"
                                     name="backgroundImage"
                                     aria-label="Background Image URL"
                                     type="text"
-                                    className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-ark rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
+                                    className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-pixel rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                                     placeholder="https://example.com/image.jpg"
                                     value={themeConfig?.backgroundImage ?? ''}
                                     onChange={(e) => onThemeConfigChange?.({ ...themeConfig!, backgroundImage: e.target.value })}
                                 />
-                                <p className="text-xs text-gray-500 font-ark">{t('appearance.imageUrlHelper', 'Leave empty for default animated background')}</p>
+                                <p className="text-xs text-gray-500 font-pixel">{t('appearance.imageUrlHelper', 'Leave empty for default animated background')}</p>
                             </div>
                             <div>
-                                <div className="flex justify-between text-xs font-ark mb-1">
+                                <div className="flex justify-between text-xs font-pixel mb-1">
                                     <span className="text-gray-300">{t('appearance.backgroundBlur', 'Background Blur')}</span>
                                     <span className="text-[#ffd700]">{themeConfig?.blur}px</span>
                                 </div>
@@ -462,17 +462,17 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                         </section>
 
                         <section className="space-y-3">
-                            <h3 className="text-[#ffd700] font-ark text-xs uppercase mb-2 border-b border-gray-700 pb-1">
+                            <h3 className="text-[#ffd700] font-pixel text-xs uppercase mb-2 border-b border-gray-700 pb-1">
                                 {t('appearance.startScreen', 'Start Screen')}
                             </h3>
                             <div className="space-y-1">
-                                <label className="text-xs text-gray-400 font-ark uppercase tracking-wider">{t('appearance.assetUrl', 'Asset URL (Image/Video)')}</label>
+                                <label className="text-xs text-gray-400 font-pixel uppercase tracking-wider">{t('appearance.assetUrl', 'Asset URL (Image/Video)')}</label>
                                 <input
                                     id="appearance-asset-url"
                                     name="startScreenUrl"
                                     aria-label="Start Screen Asset URL"
                                     type="text"
-                                    className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-ark rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
+                                    className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-pixel rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                                     placeholder="https://example.com/start.mp4"
                                     value={themeConfig?.userAssets?.startScreenUrl ?? ''}
                                     onChange={(e) => onThemeConfigChange?.({
@@ -482,7 +482,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                 />
                             </div>
                             <div className="flex items-center justify-between bg-[#162032] p-2 rounded border border-gray-700">
-                                <span className="text-xs text-gray-300 font-ark">{t('appearance.enableAudio', 'Enable Audio (Video Only)')}</span>
+                                <span className="text-xs text-gray-300 font-pixel">{t('appearance.enableAudio', 'Enable Audio (Video Only)')}</span>
                                 <button
                                     onClick={() => onThemeConfigChange?.({
                                         ...themeConfig!,
@@ -496,7 +496,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                         </section>
 
                         <section className="space-y-3">
-                            <h3 className="text-[#ffd700] font-ark text-xs uppercase mb-2 border-b border-gray-700 pb-1">
+                            <h3 className="text-[#ffd700] font-pixel text-xs uppercase mb-2 border-b border-gray-700 pb-1">
                                 {t('appearance.elementOpacity', 'Element Opacity')}
                             </h3>
                             <div className="grid grid-cols-1 gap-4">
@@ -505,7 +505,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                     if (typeof value !== 'number') return null;
                                     return (
                                         <div key={key}>
-                                            <div className="flex justify-between text-xs font-ark mb-1">
+                                            <div className="flex justify-between text-xs font-pixel mb-1">
                                                 <span className="text-gray-300 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
                                                 <span className="text-[#ffd700]">{value}</span>
                                             </div>
@@ -534,7 +534,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
             <footer className="p-3 border-t-2 border-white bg-[#0a0f16] flex justify-end">
                 <button
                     onClick={onClose}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-700 border-2 border-white text-white font-ark text-xs uppercase hover:bg-green-600 transition-colors shadow-pixel-sm active:translate-y-0.5 active:shadow-none"
+                    className="flex items-center gap-2 px-4 py-2 bg-green-700 border-2 border-white text-white font-pixel text-xs uppercase hover:bg-green-600 transition-colors shadow-pixel-sm active:translate-y-0.5 active:shadow-none"
                 >
                     <Save size={14} />
                     {t('appearance.done', 'Done')}
