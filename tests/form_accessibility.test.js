@@ -21,7 +21,7 @@ test('Components should contain accessibility attributes for form fields', () =>
 
     const mediaHubContent = fs.readFileSync(path.join(rootDir, 'components', 'MediaControlHub.tsx'), 'utf8');
     assert.ok(mediaHubContent.includes('id="microphone-select"'), 'MediaControlHub.tsx is missing mic input id');
-    assert.ok(mediaHubContent.includes('aria-label="AI Voice Volume"'), 'MediaControlHub.tsx is missing volume aria-label');
+    assert.ok(mediaHubContent.includes("aria-label={t('mediaControl.volumeAi'"), 'MediaControlHub.tsx is missing volume aria-label');
 
     const configMenuContent = fs.readFileSync(path.join(rootDir, 'components', 'ConfigurationMenu.tsx'), 'utf8');
     assert.ok(configMenuContent.includes('id={`config-select-${settingId}`}'), 'ConfigurationMenu.tsx is missing dynamic setting id');
