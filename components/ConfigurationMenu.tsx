@@ -283,7 +283,7 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                             name={settingId}
                             aria-label={field.label}
                             type={field.type}
-                            className="w-full bg-[#162032] border border-gray-600 text-white text-sm rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
+                            className="w-full bg-[#162032] border border-gray-600 text-white text-xs font-ark rounded p-2 focus:border-[#ffd700] focus:ring-1 focus:ring-[#ffd700] outline-none"
                             value={String(config[settingId as keyof AppConfig] || '')}
                             onChange={(e) => handleChange(settingId as keyof AppConfig, e.target.value)}
                             placeholder={field.placeholder}
