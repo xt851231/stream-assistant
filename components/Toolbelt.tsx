@@ -39,7 +39,7 @@ const Toolbelt: React.FC<ToolbeltProps> = React.memo(({ tool, setTool, color, se
                 backdropFilter: themeConfig.backgroundImage ? `blur(${themeConfig.blur / 2}px)` : 'none'
             }}
         >
-            <div className="text-[10px] text-gray-500 font-pixel mr-2">{t('toolbelt.tools', 'TOOLS')}</div>
+            <div className="text-[10px] text-gray-500 font-ark mr-2">{t('toolbelt.tools', 'TOOLS')}</div>
 
             <div className={`flex gap-2 items-center shrink-0 ${!isPortrait ? 'mr-6 border-r-2 border-gray-600 pr-6' : ''}`}>
                 <button
@@ -74,7 +74,7 @@ const Toolbelt: React.FC<ToolbeltProps> = React.memo(({ tool, setTool, color, se
             {!isPortrait && (
                 <>
                     <div className="flex gap-3 items-center border-r-2 border-gray-600 pr-6 mr-6 shrink-0">
-                        <div className="text-[10px] text-gray-500 font-pixel mr-1">{t('toolbelt.size', 'SIZE')}</div>
+                        <div className="text-[10px] text-gray-500 font-ark mr-1">{t('toolbelt.size', 'SIZE')}</div>
                         {SIZES.map(size => (
                             <button
                                 key={size}
@@ -89,7 +89,7 @@ const Toolbelt: React.FC<ToolbeltProps> = React.memo(({ tool, setTool, color, se
                     </div>
 
                     <div className="flex gap-3 items-center shrink-0">
-                        <div className="text-[10px] text-gray-500 font-pixel mr-1">{t('toolbelt.palette', 'PALETTE')}</div>
+                        <div className="text-[10px] text-gray-500 font-ark mr-1">{t('toolbelt.palette', 'PALETTE')}</div>
                         {COLORS.map(c => (
                             <button
                                 key={c}

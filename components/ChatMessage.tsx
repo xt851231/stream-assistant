@@ -34,7 +34,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, themeConfig }) => {
             </div>
 
             <div className="flex flex-col gap-0.5 max-w-[85%]">
-                <span className={`text-[9px] font-bold flex items-center gap-1 ${msg.type === 'system' ? 'text-yellow-500' :
+                <span className={`text-[9px] font-ark font-bold flex items-center gap-1 ${msg.type === 'system' ? 'text-yellow-500' :
                     msg.type === 'assistant' ? 'text-purple-400' :
                         'text-blue-300'
                     }`}>
@@ -48,7 +48,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, themeConfig }) => {
                     </div>
                 ) : (
                     <div
-                        className={`border rounded p-2 text-[11px] shadow-sm relative ${msg.type === 'assistant'
+                        className={`border rounded p-2 text-[11px] font-ark shadow-sm relative ${msg.type === 'assistant'
                             ? 'border-purple-500/50 text-gray-200'
                             : 'border-gray-600 text-gray-200'
                             }`}
