@@ -398,6 +398,8 @@ const App: React.FC = () => {
                                         onClick={() => setIsPortrait(!isPortrait)}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isPortrait ? 'bg-[#ffd700] border-white' : 'bg-blue-900'}`}
                                         title={isPortrait ? "Switch to Landscape Mode" : "Switch to Portrait Mode"}
+                                        aria-label={isPortrait ? "Switch to Landscape Mode" : "Switch to Portrait Mode"}
+                                        aria-pressed={isPortrait}
                                     >
                                         <Smartphone size={18} className={isPortrait ? 'text-black' : 'text-white'} />
                                     </button>
@@ -406,6 +408,8 @@ const App: React.FC = () => {
                                         onClick={() => { setIsConfigOpen(!isConfigOpen); setIsMediaOpen(false); }}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isConfigOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
                                             }`}
+                                        aria-label="Toggle Configuration Menu"
+                                        aria-expanded={isConfigOpen}
                                     >
                                         <Settings size={18} className={isConfigOpen ? 'text-black' : 'text-white'} />
                                     </button>
@@ -414,6 +418,8 @@ const App: React.FC = () => {
                                         onClick={() => { setIsMediaOpen(!isMediaOpen); setIsConfigOpen(false); }}
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isMediaOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
                                             }`}
+                                        aria-label="Toggle Media Controls"
+                                        aria-expanded={isMediaOpen}
                                     >
                                         <Video size={18} className={isMediaOpen ? 'text-black' : 'text-white'} />
                                     </button>
@@ -422,6 +428,8 @@ const App: React.FC = () => {
                                         className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isChatOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
                                             }`}
                                         title="Toggle Chat"
+                                        aria-label="Toggle Chat"
+                                        aria-pressed={isChatOpen}
                                     >
                                         <MessageSquare size={18} className={isChatOpen ? 'text-black' : 'text-white'} />
                                     </button>

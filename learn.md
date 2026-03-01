@@ -1,5 +1,27 @@
 # Learnings
 
+## [2026-03-01 14:55] Integrated Performance and Accessibility Bot Improvements
+
+**The Problem:**
+Automated bots (Bolt and Palette) proposed several branches with valuable performance optimizations and accessibility enhancements that needed to be safely integrated into the main application without causing regressions or lockfile conflicts.
+
+**Root Cause:**
+1. Base64 decoding relied on manual logic which is slower than native implementations.
+2. Numerous exported functions in `LiveAPIContext` lacked stable referential identities, causing unnecessary downstream UI re-renders on every context change.
+3. Form fields and icon-only buttons lacked standard `aria-` tags, impairing screen reader usability.
+
+**The Solution:**
+1. Upgraded `base64ToUint8Array` to prioritize `atob` and `Buffer` native capabilities for enhanced performance during streaming.
+2. Formally wrapped `addMessage`, `handleMessage`, `connect`, `cleanupMedia`, `disconnect`, `sendMessage`, `toggleAudio`, `toggleVideo`, `toggleScreen`, and `setOverlayCanvas` in `useCallback` inside `LiveAPIContext.tsx` to ensure stable references. Reordered and fixed syntax errors during the wrapping.
+3. Added `aria-label`, `aria-pressed`, and `aria-expanded` attributes to main toolbar navigation buttons (`App.tsx`) and the Chat Sidebar buttons (`ChatSidebar.tsx`). Disabling condition added for empty chat input.
+4. Added new tests for `form_accessibility.test.js` to ensure the accessibility tags remain in place.
+
+**Key Changes:**
+- `lib/utils/base64-utils.js`: Optimized Base64 decoding.
+- `contexts/LiveAPIContext.tsx`: Applied `useCallback` to exposed functions.
+- `App.tsx`: Added `aria-label`, `aria-pressed`, `aria-expanded` attributes to UI buttons.
+- `components/ChatSidebar.tsx`: Added accessibility attributes to Close and Send buttons.
+- `tests/form_accessibility.test.js`: Validated new ARIA inputs.
 ## [2026-02-24 17:15] Unified History Injection Across Model Protocols
 
 **The Problem:**

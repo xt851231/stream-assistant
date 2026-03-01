@@ -91,6 +91,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = React.memo(({ messages, onSendMe
                 <div className="flex gap-1">
                     <button
                         onClick={onClose}
+                        aria-label="Close Chat"
                         className="hover:text-red-500 text-gray-500 transition-colors"
                         title="Close Chat"
                     >
@@ -129,7 +130,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = React.memo(({ messages, onSendMe
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                     />
-                    <button type="submit" className="h-full aspect-square bg-[#2b6cee] rounded border border-blue-400 flex items-center justify-center text-white hover:bg-blue-500 transition-colors shadow-sm">
+                    <button
+                        type="submit"
+                        aria-label="Send message"
+                        disabled={!input.trim()}
+                        className={`h-full aspect-square bg-[#2b6cee] rounded border border-blue-400 flex items-center justify-center text-white transition-colors shadow-sm ${!input.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-500'}`}
+                    >
                         <Send size={16} />
                     </button>
                 </form>
