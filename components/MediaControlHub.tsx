@@ -232,10 +232,12 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                 {/* Toggles */}
                 <div className="grid grid-cols-3 gap-2">
                     <button
+                        aria-pressed={config.audioEnabled}
+                        aria-label={t('mediaControl.microphoneToggle', 'Toggle Microphone')}
                         onClick={() => {
                             handleChange('audioEnabled', !config.audioEnabled);
                         }}
-                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.audioEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
+                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${config.audioEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title={config.audioEnabled ? t('mediaControl.micOn', 'Mute Microphone') : t('mediaControl.micOff', 'Unmute Microphone')}
                     >
@@ -243,10 +245,12 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         <span className="text-[9px] mt-1 font-bold">MIC</span>
                     </button>
                     <button
+                        aria-pressed={config.videoEnabled}
+                        aria-label={t('mediaControl.cameraToggle', 'Toggle Camera')}
                         onClick={() => {
                             handleChange('videoEnabled', !config.videoEnabled);
                         }}
-                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.videoEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
+                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${config.videoEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title={config.videoEnabled ? t('mediaControl.camOn', 'Turn Off Camera') : t('mediaControl.camOff', 'Turn On Camera')}
                     >
@@ -254,10 +258,12 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         <span className="text-[9px] mt-1 font-bold">CAM</span>
                     </button>
                     <button
+                        aria-pressed={config.screenShareEnabled}
+                        aria-label={t('mediaControl.screenToggle', 'Toggle Screen Share')}
                         onClick={() => {
                             handleChange('screenShareEnabled', !config.screenShareEnabled);
                         }}
-                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors ${config.screenShareEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
+                        className={`flex flex-col items-center justify-center p-2 rounded border border-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${config.screenShareEnabled ? 'bg-blue-900/50 border-blue-400' : 'bg-[#162032] text-gray-500'
                             }`}
                         title={config.screenShareEnabled ? t('mediaControl.screenOn', 'Stop Screen Sharing') : t('mediaControl.screenOff', 'Share Screen')}
                     >
@@ -273,8 +279,11 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                         <span>{t('mediaControl.screenAudio', 'Share System Audio')}</span>
                     </div>
                     <button
+                        role="switch"
+                        aria-checked={!!config.screenAudio}
+                        aria-label={t('mediaControl.screenAudio', 'Share System Audio')}
                         onClick={() => handleChange('screenAudio', !config.screenAudio)}
-                        className={`w-8 h-4 rounded-full relative transition-colors ${config.screenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
+                        className={`w-8 h-4 rounded-full relative transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${config.screenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
                     >
                         <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${config.screenAudio ? 'translate-x-4' : 'translate-x-0'}`} />
                     </button>
