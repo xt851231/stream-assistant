@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 @font-face {
-    font-family: 'Ark Pixel';
-    src: url('/fonts/ark-pixel-16-prop/ark-pixel-16px-proportional-zh_cn.otf.woff2') format('woff2');
+    font-family: 'Zpix';
+    src: url('/fonts/zpix/Zpix.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
