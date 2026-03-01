@@ -1,5 +1,18 @@
 # Learnings
 
+## [2026-03-01 23:05] Repaired Form Accessibility Tests for i18n Support
+
+**The Problem:**
+After merging the multi-language (i18n) branch, the automated test suite failed abruptly on `tests/form_accessibility.test.js` with the error `MediaControlHub.tsx is missing volume aria-label`.
+
+**Root Cause:**
+The test was looking for the literal, hardcoded string `'aria-label="AI Voice Volume"'`. The i18n integration correctly replaced this string with the translation function: `aria-label={t('mediaControl.volumeAi', 'AI Voice Volume')}`, causing the strict string-matching test to fail.
+
+**The Solution:**
+Updated the assertion in `tests/form_accessibility.test.js` to search for the React prop syntax `aria-label={t('mediaControl.volumeAi'` instead of the hardcoded string literal, making the test resilient to internationalization.
+
+**Key Changes:**
+- `tests/form_accessibility.test.js`: Updated string assertions to check against `t()` function implementations rather than rendered English strings.
 ## [2026-03-01 14:55] Integrated Performance and Accessibility Bot Improvements
 
 **The Problem:**
