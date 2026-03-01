@@ -330,7 +330,7 @@ const App: React.FC = () => {
                             <div className={`size-2 rounded-full animate-pulse ${connectionState === 'connected' ? 'bg-green-500' :
                                 connectionState === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
                                 }`}></div>
-                            <span className={`text-[10px] font-bold tracking-wider ${connectionState === 'connected' ? 'text-green-400' :
+                            <span className={`text-[10px] font-ark font-bold tracking-wider ${connectionState === 'connected' ? 'text-green-400' :
                                 connectionState === 'connecting' ? 'text-yellow-400' : 'text-red-400'
                                 }`}>
                                 {connectionState === 'connected' ? 'ONLINE' :
@@ -386,7 +386,7 @@ const App: React.FC = () => {
                                             <Swords size={28} className="text-[#ffd700]" />
                                         </span>
                                         <div className={`flex flex-col w-full ${isPortrait ? 'hidden' : ''}`}>
-                                            <span className="text-[8px] text-blue-200 uppercase tracking-widest font-bold mb-0.5">Currently Playing</span>
+                                            <span className="text-[8px] text-blue-200 uppercase tracking-widest font-ark font-bold mb-0.5">Currently Playing</span>
                                             <input
                                                 id="game-title-input"
                                                 name="gameTitle"
