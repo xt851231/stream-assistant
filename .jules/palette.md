@@ -1,0 +1,3 @@
+## 2024-05-24 - Pill Switches Need A11y Roles
+**Learning:** Custom UI toggles (like the visual pill switches in MediaControlHub and ConfigurationMenu) lack native button accessibility semantics when built with `<div>` elements or unannotated `<button>`s, meaning screen readers won't announce them as toggles and keyboard users may not see focus states.
+**Action:** When creating custom switches, always include `role="switch"`, `aria-checked` bound to the state, `aria-labelledby` linking to the visual label, and `focus-visible` styling for keyboard navigation.
