@@ -365,4 +365,7 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
     return menuContent;
 };
 
-export default MediaControlHub;
+// ⚡ Bolt Optimization: Memoized MediaControlHub to prevent unnecessary render cycles.
+// As a portal-mounted component, it previously re-rendered during all root-level
+// App state changes (like incoming chat messages), even when closed.
+export default React.memo(MediaControlHub);

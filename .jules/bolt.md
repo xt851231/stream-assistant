@@ -1,0 +1,3 @@
+## 2026-03-01 - Memoizing Portals
+**Learning:** Root-level React components that act as global providers (like `App.tsx` handling connection, chat, and tooling state) will aggressively re-render all children on state change. Heavy child components like `ConfigurationMenu` and `MediaControlHub`, which return `createPortal` when open, or `null` when closed, will unnecessarily execute their entire internal hook/render cycles if not wrapped in `React.memo`, significantly degrading performance during high-frequency events (like receiving streaming chat).
+**Action:** Always wrap heavy, state-independent portal/dialog components in `React.memo` if they are mounted high in the DOM tree, ensuring they only re-render when their explicit props (`isOpen`, `config`) change.

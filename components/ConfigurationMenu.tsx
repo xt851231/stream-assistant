@@ -545,4 +545,8 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
     );
 };
 
-export default ConfigurationMenu;
+// ⚡ Bolt Optimization: Wrapped heavy ConfigurationMenu in React.memo
+// This prevents the entire dialog (and its many tabs/inputs) from re-rendering
+// on every keystroke in the main App (e.g. Chat or Stage interactions)
+// when the dialog is merely closed or its specific props haven't changed.
+export default React.memo(ConfigurationMenu);
