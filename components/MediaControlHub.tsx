@@ -365,4 +365,7 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
     return menuContent;
 };
 
-export default MediaControlHub;
+// ⚡ Bolt: Wrapped in React.memo to prevent expensive re-renders when parent state
+// (e.g., game title typing) updates. Since this component manages a lot of DOM nodes
+// inside a portal, preventing re-renders significantly reduces main thread blocking.
+export default React.memo(MediaControlHub);

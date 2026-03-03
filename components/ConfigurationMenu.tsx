@@ -545,4 +545,6 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
     );
 };
 
-export default ConfigurationMenu;
+// ⚡ Bolt: Wrapped in React.memo to prevent unnecessary re-renders when parent state
+// (like game title typing) updates, as these menus are heavy and mostly static when closed.
+export default React.memo(ConfigurationMenu);
