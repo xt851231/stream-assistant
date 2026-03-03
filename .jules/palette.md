@@ -1,0 +1,3 @@
+## 2024-05-18 - Switch Toggle Accessibility
+**Learning:** Custom boolean toggle buttons (pill switches) visually convey state but fail screen reader and keyboard accessibility if implemented as plain `<button>` elements. They require `role="switch"`, `aria-checked`, explicit `aria-label`, and `focus-visible` styles to be properly operable.
+**Action:** When implementing custom toggle switches, always include `role="switch"`, `aria-checked={boolean}`, an accessible name (`aria-label`), and `focus-visible:ring-2 focus:outline-none` for keyboard navigation.
