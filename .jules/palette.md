@@ -1,0 +1,3 @@
+## 2024-05-24 - Custom Pill Switch Accessibility
+**Learning:** Custom toggle buttons designed as "pill switches" require explicit `role="switch"` and `aria-checked` attributes to be announced correctly by screen readers, replacing their default `<button>` semantics. In addition, providing distinct `focus-visible` styling is essential because custom implementations often lack the native focus rings of `<input type="checkbox">`.
+**Action:** Always verify that newly created custom interactive elements implement the appropriate ARIA roles, states, and clear focus-visible outlines. Ensure `aria-labelledby` points correctly to the text label.
