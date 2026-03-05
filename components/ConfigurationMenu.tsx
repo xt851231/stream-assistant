@@ -256,10 +256,13 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                         />
                     ) : field.type === 'checkbox' ? (
                         <div className="flex items-center justify-between bg-[#162032] p-2 rounded border border-gray-700">
-                            <span className="text-xs text-gray-300">{t(`systemConfig.fields.${settingId}`, field.label)}</span>
+                            <span id={`config-checkbox-label-${settingId}`} className="text-xs text-gray-300">{t(`systemConfig.fields.${settingId}`, field.label)}</span>
                             <button
+                                role="switch"
+                                aria-checked={!!config[settingId as keyof AppConfig]}
+                                aria-labelledby={`config-checkbox-label-${settingId}`}
                                 onClick={() => handleChange(settingId as keyof AppConfig, !config[settingId as keyof AppConfig])}
-                                className={`w-8 h-4 rounded-full relative transition-colors ${config[settingId as keyof AppConfig] ? 'bg-green-500' : 'bg-gray-600'}`}
+                                className={`w-8 h-4 rounded-full relative transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${config[settingId as keyof AppConfig] ? 'bg-green-500' : 'bg-gray-600'}`}
                             >
                                 <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${config[settingId as keyof AppConfig] ? 'translate-x-4' : 'translate-x-0'}`} />
                             </button>
@@ -482,13 +485,16 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                 />
                             </div>
                             <div className="flex items-center justify-between bg-[#162032] p-2 rounded border border-gray-700">
-                                <span className="text-xs text-gray-300">{t('appearance.enableAudio', 'Enable Audio (Video Only)')}</span>
+                                <span id="start-screen-audio-label" className="text-xs text-gray-300">{t('appearance.enableAudio', 'Enable Audio (Video Only)')}</span>
                                 <button
+                                    role="switch"
+                                    aria-checked={!!themeConfig?.userAssets?.startScreenAudio}
+                                    aria-labelledby="start-screen-audio-label"
                                     onClick={() => onThemeConfigChange?.({
                                         ...themeConfig!,
                                         userAssets: { ...themeConfig?.userAssets, startScreenAudio: !themeConfig?.userAssets?.startScreenAudio }
                                     })}
-                                    className={`w-8 h-4 rounded-full relative transition-colors ${themeConfig?.userAssets?.startScreenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
+                                    className={`w-8 h-4 rounded-full relative transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${themeConfig?.userAssets?.startScreenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
                                 >
                                     <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${themeConfig?.userAssets?.startScreenAudio ? 'translate-x-4' : 'translate-x-0'}`} />
                                 </button>
