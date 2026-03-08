@@ -545,4 +545,6 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
     );
 };
 
-export default ConfigurationMenu;
+// Performance optimization: React.memo prevents expensive re-renders of this complex portal
+// component when parent components (like App.tsx) re-render due to unrelated state changes.
+export default React.memo(ConfigurationMenu);

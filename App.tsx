@@ -186,7 +186,10 @@ const App: React.FC = () => {
 
     // Media Handlers
     // Media Handlers
-    const handleMediaConfigChange = (newConfig: MediaConfig) => {
+    // Performance optimization: stabilize handleMediaConfigChange with useCallback
+    // This prevents re-creation of this handler on every render (e.g., when gameTitle changes),
+    // which in turn prevents unnecessary re-renders of the heavy MediaControlHub component.
+    const handleMediaConfigChange = React.useCallback((newConfig: MediaConfig) => {
         console.log('🔧 handleMediaConfigChange:', newConfig);
         setMediaConfig(newConfig);
 
@@ -209,16 +212,18 @@ const App: React.FC = () => {
             // Note: toggleScreen will need to handle restarting if screenAudio changed while active
             toggleScreen(newConfig.screenShareEnabled, config, newConfig.screenAudio);
         }
-    };
+    }, [audioStreaming, videoStreaming, screenSharing, mediaConfig, config, toggleAudio, toggleVideo, toggleScreen]);
 
     // Calculate effective config regarding active states from Context
     // This ensures the UI always reflects the REAL state, not just the local config
-    const effectiveMediaConfig: MediaConfig = {
+    // Performance optimization: useMemo prevents the creation of a new object reference on every render,
+    // thereby keeping MediaControlHub props stable and skipping expensive re-renders.
+    const effectiveMediaConfig: MediaConfig = React.useMemo(() => ({
         ...mediaConfig,
         audioEnabled: audioStreaming,
         videoEnabled: videoStreaming,
         screenShareEnabled: screenSharing
-    };
+    }), [mediaConfig, audioStreaming, videoStreaming, screenSharing]);
 
     /* 
        Refactor Note: 

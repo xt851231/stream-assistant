@@ -365,4 +365,6 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
     return menuContent;
 };
 
-export default MediaControlHub;
+// Performance optimization: React.memo prevents expensive re-renders of this heavy portal component
+// when parent components (like App.tsx) re-render due to unrelated state changes (e.g. typing in inputs).
+export default React.memo(MediaControlHub);
