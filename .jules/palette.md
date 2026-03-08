@@ -1,0 +1,3 @@
+## 2024-05-24 - Missing accessibility attributes on custom UI switches
+**Learning:** Custom UI toggles (pill switches) across the application frequently lacked fundamental screen reader and keyboard accessibility patterns, specifically missing the ARIA `switch` role, `aria-checked` states, and clear `focus-visible` styles.
+**Action:** When implementing or updating custom toggles, always apply `role="switch"`, dynamically bind `aria-checked` to the state, provide a descriptive `aria-label`, and use `focus-visible` styling to ensure they are fully navigable and understandable by all users.
