@@ -1,0 +1,3 @@
+## 2024-05-24 - Pill Toggles Accessibility
+**Learning:** Custom pill toggles (often built with `div` or `button` and animated shapes) are completely opaque to screen readers and difficult to navigate via keyboard if they lack specific ARIA roles and focus styles. Specifically, without `role="switch"` and `aria-checked`, screen reader users don't know the state or function of the toggle.
+**Action:** Always add `role="switch"`, dynamically bind `aria-checked`, link the label text with `aria-labelledby`, and provide visible focus states (`focus-visible:outline-none focus-visible:ring-2`) to all custom pill toggle switches.
