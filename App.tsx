@@ -213,12 +213,13 @@ const App: React.FC = () => {
 
     // Calculate effective config regarding active states from Context
     // This ensures the UI always reflects the REAL state, not just the local config
-    const effectiveMediaConfig: MediaConfig = {
+    // Performance: Memoize to prevent unnecessary re-renders of MediaControlHub
+    const effectiveMediaConfig: MediaConfig = React.useMemo(() => ({
         ...mediaConfig,
         audioEnabled: audioStreaming,
         videoEnabled: videoStreaming,
         screenShareEnabled: screenSharing
-    };
+    }), [mediaConfig, audioStreaming, videoStreaming, screenSharing]);
 
     /* 
        Refactor Note: 
@@ -240,6 +241,19 @@ const App: React.FC = () => {
     const handleCloseChat = React.useCallback(() => {
         setIsChatOpen(false);
     }, []);
+
+    // Performance: Memoize toggle callbacks to prevent unnecessary re-renders of MediaControlHub
+    const handleToggleAudio = React.useCallback((enabled: boolean) => {
+        toggleAudio(enabled, 'default', config);
+    }, [toggleAudio, config]);
+
+    const handleToggleVideo = React.useCallback((enabled: boolean) => {
+        toggleVideo(enabled, 'default', config);
+    }, [toggleVideo, config]);
+
+    const handleToggleScreen = React.useCallback((enabled: boolean) => {
+        toggleScreen(enabled, config, mediaConfig.screenAudio);
+    }, [toggleScreen, config, mediaConfig.screenAudio]);
 
     const stageStyle = React.useMemo(() => ({
         backgroundColor: getBgColor('#000000', themeConfig?.opacity?.mainStage || 0.8)
@@ -450,9 +464,9 @@ const App: React.FC = () => {
                                         onConfigChange={handleMediaConfigChange}
                                         onClose={() => setIsMediaOpen(false)}
                                         themeConfig={themeConfig}
-                                        onToggleAudio={(enabled) => toggleAudio(enabled, 'default', config)}
-                                        onToggleVideo={(enabled) => toggleVideo(enabled, 'default', config)}
-                                        onToggleScreen={(enabled) => toggleScreen(enabled, config, mediaConfig.screenAudio)}
+                                        onToggleAudio={handleToggleAudio}
+                                        onToggleVideo={handleToggleVideo}
+                                        onToggleScreen={handleToggleScreen}
                                         isPortrait={isPortrait}
                                         containerRef={appContainerRef}
                                         triggerRef={mediaButtonRef}

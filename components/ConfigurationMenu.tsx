@@ -545,4 +545,4 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
     );
 };
 
-export default ConfigurationMenu;
+export default React.memo(ConfigurationMenu); // Performance: Memoize heavy portal component to prevent execution of hook/render cycles when closed during root-level state changes
