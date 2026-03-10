@@ -1,7 +1,7 @@
 
 import { test, describe, it, mock } from 'node:test';
 import assert from 'node:assert';
-import { ModelClient } from '../lib/api/ModelClient.js';
+import { ModelClient } from './mock_components/ModelClient.js';
 
 describe('Security Logging Vulnerability', () => {
     it('should NOT log the API key when creating an adapter', (t) => {
