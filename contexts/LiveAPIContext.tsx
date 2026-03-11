@@ -254,7 +254,8 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         try {
             // Re-create client
             const modelDef = MODEL_REGISTRY[config.provider];
-            const adapterType = modelDef?.protocol === 'websocket' ? 'live' : 'flash';
+            let adapterType = modelDef?.protocol === 'websocket' ? 'live' : 'flash';
+            if (modelDef?.id === 'qwen-omni') adapterType = 'qwen-omni';
 
             // If switching away from Live API, clear the session handle constraints
             if (adapterType !== 'live') {
@@ -262,6 +263,7 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             }
 
             clientRef.current = ModelClient.createAdapter(adapterType, {
+                provider: config.provider,
                 apiKey: config.apiKey,
                 modelId: config.modelId,
                 voice: config.voice,
@@ -597,16 +599,37 @@ export const LiveAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (modelDef?.protocol === 'websocket' && connected) {
             console.log('🔄 Config changed, reconnecting with new settings (media streams preserved)...');
 
-            // Neutralize old adapter's handlers so its close event doesn't override new state
-            clientRef.current.removeAllListeners();
-            clientRef.current.disconnect();
+            // Gracefully wait for the old adapter to finish closing
+            const oldClient = clientRef.current;
+            const closedPromise = new Promise(resolve => {
+                const timer = setTimeout(() => {
+                    oldClient.off('close', resolve);
+                    resolve(true);
+                }, 1000); // 1s timeout
+                oldClient.once('close', () => {
+                    clearTimeout(timer);
+                    resolve(true);
+                });
+            });
 
-            // Explicitly wait for the WebSocket to close to prevent "Socket already closing" collisions
-            await new Promise(resolve => setTimeout(resolve, 300));
+            // Neutralize context handlers BEFORE disconnecting
+            oldClient.removeAllListeners('content');
+            oldClient.removeAllListeners('open');
+            oldClient.removeAllListeners('close');
+            oldClient.removeAllListeners('error');
+
+            oldClient.disconnect();
+            await closedPromise;
+
+            // Wait an extra beat for network/socket handles to clear
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Create new adapter with updated config
-            const adapterType = 'live';
+            let adapterType = modelDef?.protocol === 'websocket' ? 'live' : 'flash';
+            if (modelDef?.id === 'qwen-omni') adapterType = 'qwen-omni';
+
             clientRef.current = ModelClient.createAdapter(adapterType, {
+                provider: newConfig.provider,
                 apiKey: newConfig.apiKey,
                 modelId: newConfig.modelId,
                 voice: newConfig.voice,

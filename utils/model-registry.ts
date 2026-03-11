@@ -23,6 +23,12 @@ export function loadModelConfig(provider: string): AppConfig {
     const saved = localStorage.getItem(key);
     const parsed = safeJsonParse(saved);
     const validated = validateAndMergeConfig(DEFAULT_CONFIG, parsed);
+
+    // Enforce Client-Side VAD for Qwen (solves 1006 WebSocket crash without complex adapter logic)
+    if (provider === 'qwen') {
+        validated.enableVAD = true;
+    }
+
     return { ...validated, provider };
 }
 
@@ -39,7 +45,8 @@ export function getEffectiveSettings(requiresTTS: boolean, settings: string[]): 
 }
 
 export const PROVIDERS = {
-    google: { id: 'google', name: 'Google Gemini', disabled: false }
+    google: { id: 'google', name: 'Google Gemini', disabled: false },
+    qwen: { id: 'qwen', name: 'Alibaba Qwen', disabled: false }
 };
 
 export const MODEL_REGISTRY: Record<string, any> = {
@@ -49,6 +56,7 @@ export const MODEL_REGISTRY: Record<string, any> = {
         providerId: 'google',
         modelId: 'gemini-2.5-flash-native-audio-preview-12-2025',
         protocol: 'websocket',
+        modelInstruction: "You are engaged in a live voice conversation. Keep responses brief and natural.",
         uiGroups: [
             {
                 id: 'system',
@@ -71,6 +79,7 @@ export const MODEL_REGISTRY: Record<string, any> = {
         modelId: 'gemini-2.5-flash',
         protocol: 'rest',
         requiresTTS: true,
+        modelInstruction: "You are engaged in a spoken conversation. Keep your responses extremely concise, Speak naturally and casually, without using markdown, lists, or long explanations. Do not force the conversation forward by ending every response with a question; let the conversation breathe sometimes",
         uiGroups: [
             {
                 id: 'system',
@@ -79,9 +88,29 @@ export const MODEL_REGISTRY: Record<string, any> = {
                 sections: [
                     { title: 'Connection', settings: ['apiKey', 'modelId'] },
                     { title: 'Behavior', settings: ['persona', 'systemInstructions', 'temperature'] },
-                    { title: 'Features', settings: ['googleGrounding', 'affectiveDialog'] },
+                    { title: 'Features', settings: ['googleGrounding'] },
                     { title: 'Reasoning', settings: ['thinkingBudget', 'topP', 'topK'] },
                     { title: 'Client VAD', settings: ['enableVAD', 'silenceDuration', 'prefixPadding'] },
+                ]
+            }
+        ]
+    },
+    'qwen-omni': {
+        id: 'qwen-omni',
+        label: 'Qwen Omni (WebSocket)',
+        providerId: 'qwen',
+        modelId: 'qwen3-omni-flash-realtime',
+        protocol: 'websocket',
+        modelInstruction: "You are a participant in a live voice dialogue. Your responses must be brief, conversational, and read well when spoken aloud. Limit yourself to a single short paragraph. Do not use formatting like bullet points. Do not end every turn with a question—only but try keep conversation flow.",
+        uiGroups: [
+            {
+                id: 'system',
+                label: 'System',
+                icon: 'settings',
+                sections: [
+                    { title: 'Connection', settings: ['apiKey', 'modelId'] },
+                    { title: 'Behavior', settings: ['persona', 'systemInstructions', 'voice'] },
+                    { title: 'Client VAD', settings: ['silenceDuration', 'prefixPadding'] },
                 ]
             }
         ]

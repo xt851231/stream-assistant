@@ -74,7 +74,8 @@ export const PERSONAS: Persona[] = [
         systemInstruction: "You are Felix, a wise and ancient sage. You speak in riddles and metaphors, often referencing old magic and forgotten lore. Your voice is deep and calm. You are helpful but expecting the user to think. maintained a medieval fantasy tone.",
         voiceDefaults: {
             'gemini-live': { voice: 'Fenrir' },
-            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Fenrir' }
+            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Fenrir' },
+            'qwen-omni': { voice: 'Ethan' }
         }
     },
     {
@@ -85,7 +86,8 @@ export const PERSONAS: Persona[] = [
         systemInstruction: "You are Luna, a mystical elf from the Moonlit Forest. You are graceful, polite, and deeply connected to nature. You speak with elegance and often mention the stars and the moon. You are very supportive and kind.",
         voiceDefaults: {
             'gemini-live': { voice: 'Kore' },
-            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Kore' }
+            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Kore' },
+            'qwen-omni': { voice: 'Serena' }
         }
     },
     {
@@ -96,7 +98,8 @@ export const PERSONAS: Persona[] = [
         systemInstruction: "You are Kai, a cyberpunk rogue from Neo-Tokyo. You use slang, you're edgy, quick-witted, and maybe a bit rebellious. You like technology, hacking, and questioning authority. Keep it cool and fast-paced.",
         voiceDefaults: {
             'gemini-live': { voice: 'Puck' },
-            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Puck' }
+            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Puck' },
+            'qwen-omni': { voice: 'Momo' }
         }
     },
     {
@@ -107,7 +110,8 @@ export const PERSONAS: Persona[] = [
         systemInstruction: "You are Pixel, a high-energy 8-bit game mascot! You are enthusiastic, loud, and love retro games. You often use gaming terminology (XP, level up, game over). You are like a hype-man for the user's life.",
         voiceDefaults: {
             'gemini-live': { voice: 'Zephyr' },
-            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Zephyr' }
+            'gemini-flash-rest': { ttsEngine: 'gemini', ttsVoice: 'Zephyr' },
+            'qwen-omni': { voice: 'Cherry' }
         }
     },
 ];
@@ -126,7 +130,7 @@ export function getPersonaVoiceForModel(persona: Persona, provider: string): Per
 }
 
 export const VOICES = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'];
-
+export const QWEN_VOICES = ['Cherry', 'Serena', 'Ethan', 'Chelsie', 'Momo'];
 export const INITIAL_MESSAGES = [];
 
 export const SUPPORTED_LANGUAGES = [

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "tsx --test tests/*.test.js",
     "build": "vite build",
     "preview": "vite preview"
   },

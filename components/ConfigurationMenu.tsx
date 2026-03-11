@@ -2,7 +2,7 @@ import React, { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AppConfig, ThemeConfig } from '../types';
 import { MODEL_REGISTRY, PROVIDERS, FIELD_DEFINITIONS, PERSONAS, VOICES, getEffectiveSettings, saveModelConfig, loadModelConfig } from '../utils/model-registry';
-import { getPersonaVoiceForModel, SUPPORTED_LANGUAGES } from '../constants';
+import { getPersonaVoiceForModel, SUPPORTED_LANGUAGES, QWEN_VOICES, DEFAULT_CONFIG } from '../constants';
 import { Cpu, Activity, Save, Image, Settings, Sparkles, Brain, Mic } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getBgColor } from '../lib/utils/style-utils';
@@ -168,6 +168,16 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                 provider: newModelKey,
                 modelId: newModelDef.modelId,
             };
+
+            // Ensure the correct voice default for the current persona is applied to the new model
+            const personaId = nextConfig.selectedPersonaId || DEFAULT_CONFIG.selectedPersonaId;
+            const persona = PERSONAS.find(p => p.id === personaId);
+            if (persona) {
+                const voiceConfig = getPersonaVoiceForModel(persona, newModelKey);
+                if (voiceConfig.voice) nextConfig.voice = voiceConfig.voice;
+                if (voiceConfig.ttsEngine) nextConfig.ttsEngine = voiceConfig.ttsEngine as 'browser' | 'gemini';
+                if (voiceConfig.ttsVoice) nextConfig.ttsVoice = voiceConfig.ttsVoice;
+            }
         }
 
         nextConfig.provider = newModelKey;
@@ -238,6 +248,10 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                             {settingId === 'ttsVoice' && config.ttsEngine === 'browser' ? (
                                 browserVoices.map((v) => (
                                     <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>
+                                ))
+                            ) : settingId === 'voice' && currentModelId === 'qwen-omni' ? (
+                                QWEN_VOICES.map((v) => (
+                                    <option key={v} value={v}>{t(`systemConfig.options.${v}`, v)}</option>
                                 ))
                             ) : field.options?.map((opt: any) => (
                                 <option key={opt.value} value={opt.value}>{t(`systemConfig.options.${opt.value}`, opt.label)}</option>

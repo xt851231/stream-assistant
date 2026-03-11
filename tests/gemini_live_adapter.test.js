@@ -28,6 +28,17 @@ describe('GeminiLiveAdapter Tests', () => {
         emitMock = mock.method(adapter, 'emit');
     });
 
+    it('should combine systemInstruction and modelInstruction in connect config', () => {
+        adapter.config.systemInstruction = "Live persona override.";
+        adapter.config.provider = 'gemini-live'; // For MODEL_REGISTRY lookup
+
+        const connectConfig = adapter._buildConnectConfig();
+
+        assert.ok(connectConfig.systemInstruction.includes("Live persona override."), "Should contain user instruction");
+        assert.ok(connectConfig.systemInstruction.includes("live voice conversation. Keep responses brief"), "Should contain registry instruction");
+        assert.ok(connectConfig.systemInstruction.includes("\n\n"), "Should be separated by double newline");
+    });
+
     it('should emit setup_complete event', () => {
         const message = { setupComplete: {} };
         adapter.handleIncomingMessage(message);

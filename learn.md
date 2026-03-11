@@ -1,6 +1,168 @@
-# Learnings
+## [2026-03-09 17:21] Added Model-Specific Instructions Dimension
 
-## [2026-03-01 23:05] Repaired Form Accessibility Tests for i18n Support
+**The Problem:**
+1. Gemini 2.5 Flash and Qwen Omni generate responses that are too long for daily conversation.
+2. The models often unnaturally force the conversation forward by ending every response with a question.
+3. We needed a way to control these behaviors optimally per-model without cluttering the user-defined persona prompt.
+4. Gemini Flash was using a fake "text injection" for Affective Dialog which is only natively supported in the Gemini Live API.
+
+**Root Cause:**
+1. System instructions were monolithic and relied purely on the user's persona. There was no architectural layer to selectively append backend-defined rules based on the specific AI model's conversational quirks.
+
+**The Solution:**
+1. **Registry Addition:** Added a `modelInstruction` field to `MODEL_REGISTRY` to store model-specific conversational rules (e.g., "Keep responses extremely concise," "Do not end every turn with a question").
+2. **Adapter Composition:** Updated `GeminiLiveAdapter`, `GeminiFlashAdapter`, and `QwenOmniAdapter` to automatically concatenate the user's `systemInstruction` with the model's `modelInstruction` before sending to the backend API.
+3. **Affective Dialog Cleanup:** Removed the fake `affectiveDialog` text injection from `GeminiFlashAdapter` and hid the UI toggle for Flash, since it is only genuinely supported via the WebSocket protocol in Gemini Live.
+
+**Key Changes:**
+- `utils/model-registry.ts`: Added `modelInstruction` definitions and removed `affectiveDialog` from Flash UI.
+- `contexts/LiveAPIContext.tsx`: Passed provider info to `ModelClient.createAdapter` for registry lookups.
+- `lib/api/adapters/`: Implemented instruction composition in Live, Flash, and Qwen adapters.
+- `tests/`: Added unit tests verifying instruction composition in `gemini_live_adapter.test.js` and `qwen_omni_adapter.test.js`.
+
+## [2026-03-06 21:30] Fixed WebSocket Race Conditions and Qwen Protocol Violations
+
+**The Problem:**
+1. Switching personas or changing settings caused the "Close received after close" error in the browser console, followed by a WebSocket error and abnormal closure (1006).
+2. The Qwen Omni adapter was emitting redundant `setup_complete` events, causing the chat history to be injected multiple times.
+3. The Qwen Realtime API rejected `session.update` payloads that contained both `temperature` and `topP`.
+
+**Root Cause:**
+1. **Reconnection Race:** `LiveAPIContext.tsx` was creating a new WebSocket connection before the old one had finished its closure handshake. In some browsers/environments, this leads to connection rejection or state conflicts.
+2. **Robustness Gaps:** `disconnect()` methods in both `QwenOmniAdapter` and `GeminiLiveAdapter` ignored the `CONNECTING` state, leaving "zombie" connections opening in the background after a disconnect command.
+3. **Payload Conflicts:** The dashboard's default configuration includes both `temperature` and `topP`. Qwen's API strictly requires selecting only one of these parameters.
+4. **Event Duplication:** Qwen sends both `session.created` and `session.updated`. Mapping both to `setup_complete` triggered redundant logic (like history sync) in the UI context.
+
+**The Solution:**
+1. **Await Closure:** Updated `LiveAPIContext.tsx` to explicitly `await` the `close` event of the old adapter (with a 1s timeout) before instantiating the new one. Added `EventEmitter.once()` to facilitate this.
+2. **Abort Connecting Sockets:** Enhanced `disconnect()` in all adapters to invoke `ws.close()` even if the socket is still in the `CONNECTING` state.
+3. **Payload Sanitization:** Updated `QwenOmniAdapter.js` to prioritize `temperature` and omit `topP` if a conflict exists, and restricted `setup_complete` to only fire on the initial `session.created` event.
+4. **Listener Cleanup:** Selectively removed context listeners from old adapters before disconnecting to prevent "ghost" state updates (like `setConnected(false)`) from overwriting the new adapter's state.
+
+**Key Changes:**
+- `contexts/LiveAPIContext.tsx`: Implemented robust "wait-for-close" reconnection logic.
+- `lib/api/adapters/QwenOmniAdapter.js`: Fixed payload conflicts, redundant events, and disconnect handling.
+- `lib/api/adapters/GeminiLiveAdapter.js`: Hardened disconnect handling.
+- `lib/api/interfaces/ModelAdapter.js`: Added `once()` to the base `EventEmitter`.
+- `tests/qwen_omni_adapter.test.js`: Created new test suite to verify the fixes.
+
+## [2026-03-06 21:45] Mapped Gemini Live Settings → Qwen Omni + Fixed Input Transcription
+
+**The Problem:**
+1. Input audio was not being transcribed when using the Qwen Omni adapter — the user's speech never appeared as text in the chat feed.
+2. The `session.update` payload was missing many required Qwen-specific fields (`modalities`, `input_audio_format`, `output_audio_format`, `smooth_output`).
+3. VAD configuration was incomplete — missing `threshold` and `prefix_padding_ms`.
+4. The adapter only handled 5 server-side event types, ignoring important events like input transcription results and speech detection.
+
+**Root Cause:**
+1. **Missing transcription config**: Qwen requires `input_audio_transcription: { model: "gummy-realtime-v1" }` in `session.update` to enable input ASR. Without it, the server never emits `conversation.item.input_audio_transcription.completed` events.
+2. **Missing event handler**: Even if transcription were enabled, `handleIncomingMessage()` had no case for `conversation.item.input_audio_transcription.completed`.
+3. **Incomplete settings mapping**: The original adapter was built with only basic Gemini-to-Qwen mapping. Official Qwen docs specify many more required/recommended fields.
+4. **Unconditional `interrupted` on speech_started**: Unlike Gemini (which only sends `interrupted` during active model generation), Qwen fires `speech_started` for ALL speech. Unconditional emission caused `audioPlayer.interrupt()` and `[Interrupted]` spam on every utterance, preventing audio responses.
+
+**The Solution:**
+1. **Overhauled `session.update` payload** to include all fields from the [official docs](https://help.aliyun.com/zh/model-studio/client-events):
+   - `modalities: ["text", "audio"]`, `input_audio_format: "pcm16"`, `output_audio_format: "pcm24"`
+   - `smooth_output: true` (Qwen3-Flash conversational style)
+   - `input_audio_transcription: { model: "gummy-realtime-v1" }`
+   - Complete VAD config: `threshold: 0.5`, `prefix_padding_ms: 300`, `silence_duration_ms: 800`
+   - `repetition_penalty: 1.05` (Qwen default)
+2. **Added event handlers** for:
+   - `conversation.item.input_audio_transcription.completed` → emits `input_transcription` content event
+   - `conversation.item.input_audio_transcription.failed` → logs warning
+   - `input_audio_buffer.speech_started` → emits `interrupted`, **but only when model is actively responding** (tracked via `_isModelResponding` flag).
+   - 12 other known but non-actionable server events (suppresses "unknown event" noise)
+3. **Added `default` case** in the message handler to log truly unexpected event types.
+4. **Corrected pcm24 understanding**: `pcm24` = 24kHz sample rate with 16-bit depth (NOT 24-bit depth). Audio data passes through unchanged.
+
+**Key Changes:**
+- `lib/api/adapters/QwenOmniAdapter.js`: Complete `session.update` payload overhaul + expanded event handling + pcm24→pcm16 conversion.
+- `tests/qwen_omni_adapter.test.js`: 13 tests (8 new) covering payload structure, event handling, conditional interrupts, and audio conversion.
+
+## [2026-03-06 09:00] Qwen Omni Realtime Integration
+
+**The Problem:**
+1. The application needed to support the Qwen Omni Realtime API (`qwen3-omni-flash-realtime`) to diversify the available AI models beyond Google Gemini.
+2. Qwen's WebSocket implementation requires specific event formatting (`conversation.item.create`, `input_audio_buffer.append`) and URL-based authentication since browsers block custom `Authorization` headers on native WebSockets.
+
+**Root Cause:**
+1. Only Gemini Live (WebSocket) and Gemini Flash (REST) were initially supported in the `ModelRegistry`.
+2. The `ModelAdapter` interface needed a specialized adapter implementation to translate the dashboard's unified events into Qwen's expected WebSocket payloads.
+
+**The Solution:**
+1. **Isolated Testing:** Created a standalone script `qwen-omni-test/test-qwen.js` to prototype the connection and verify that Qwen supports URL query parameter authentication (`?api_key=...`), bypassing the browser header limitation.
+2. **Adapter Implementation:** Developed `QwenOmniAdapter.js` implementing the `ModelAdapter` interface to handle Qwen-specific events (`session.created`, `response.audio.delta`, etc.) and map them correctly to the application's internal `content` and `turn_complete` state mechanics.
+3. **Model Registry Integration:** Added the `qwen-omni` provider to `utils/model-registry.ts` and updated `ModelClient.js` to instantiate the new adapter. Added the Qwen default voice "Cherry" to `constants.ts` `VOICES` array so users can select it in the UI.
+
+**Key Changes:**
+- `qwen-omni-test/test-qwen.js`: Created standalone prototype script.
+- `lib/api/adapters/QwenOmniAdapter.js`: New adapter handling Qwen omni realtime WebSocket connectivity and event mapping.
+- `lib/api/ModelClient.js`: Added Qwen to the adapter factory.
+- `utils/model-registry.ts`: Added Qwen Omni to `PROVIDERS` and `MODEL_REGISTRY`.
+- `constants.ts`: Added "Cherry" to `VOICES` list.
+
+## [2026-03-06 17:30] Fixed Qwen Adapter Instantiation Bug and Invalid Payloads
+
+**The Problem:**
+1. When selecting `Qwen Omni (WebSocket)` in the dashboard, the application displayed a Gemini Live API error (`API key not valid`) and console logged Gemini configurations instead of Qwen's.
+2. The Qwen Omni doc strictly outlines `session.update` parameters, and passing Gemini-specific fields (like `speechConfig`, `enableAffectiveDialog`, `thinkingConfig`) caused server rejection.
+
+**Root Cause:**
+1. In `LiveAPIContext.tsx`, `adapterType` was blindly resolved using `modelDef?.protocol === 'websocket' ? 'live' : 'flash'`. Because Qwen uses WebSockets, it incorrectly identified as `'live'` and instantiated `GeminiLiveAdapter` instead of `QwenOmniAdapter`. 
+2. The `connect` method forced `const adapterType = 'live'` on reconnection pipelines as well.
+3. The adapter received the massive dashboard `config` object which contained all Gemini-specific parameters, and we needed to manually ensure Qwen's WebSocket only gets Qwen-supported mappings.
+
+**The Solution:**
+1. **Dynamic Instantiation:** Modified `LiveAPIContext.tsx` to explicitly check `if (modelDef?.id === 'qwen-omni') adapterType = 'qwen-omni'` before instantiating the adapter via `ModelClient`.
+2. **Payload Sanitization:** Updated `QwenOmniAdapter.js` to build a clean `sessionUpdate.session` object incorporating only Qwen-native properties (`turn_detection`, `instructions`, `voice`, `temperature`, `top_p`, `top_k`). 
+3. **Telemetry:** Added explicit `console.log("Qwen Adapter Initialized with UI Config:", { ... })` and a `console.log` logging the sanitized `sessionUpdate` to aid future debugging and confirm separation from Gemini parameters.
+
+**Key Changes:**
+- `contexts/LiveAPIContext.tsx`: Fixed `adapterType` resolution during connection initiation and reconnection state changes.
+- `lib/api/adapters/QwenOmniAdapter.js`: Added UI config logging, payload sanitization, and expanded Qwen parameter support.
+
+## [2026-03-06 09:15] Qwen Voice Configuration
+
+**The Problem:**
+1. The dropdown for Voice selection in the "System" tab hardcoded Gemini voices, making it impossible to select Qwen-specific voices when the Qwen Omni model was active.
+2. When switching models, the active Persona's default voice was not applied, causing the new model to attempt using an unsupported voice.
+
+**Root Cause:**
+1. `FIELD_DEFINITIONS` in `model-registry.ts` statically defined options for the generic `voice` field based on Gemini's native `VOICES` array.
+2. `handleModelChange` inside `ConfigurationMenu.tsx` only applied static `FIELD_DEFINITIONS` defaults and didn't consider persona-specific voice overrides for the new model.
+
+**The Solution:**
+1. **Dynamic Options:** Updated `ConfigurationMenu.tsx` to explicitly check if `currentModelId === 'qwen-omni'` and conditionally render `QWEN_VOICES` instead of the default options for the `voice` field.
+2. **Persona Awareness:** Modified `handleModelChange` to resolve the current persona's voice defaults for the newly selected model and inject them into the initial state. Added Qwen-specific voice defaults to all entries in the `PERSONAS` array.
+
+**Key Changes:**
+- `constants.ts`: Added `QWEN_VOICES` array and updated `PERSONAS` with `qwen-omni` voice defaults.
+- `components/ConfigurationMenu.tsx`: Fixed default voice resolution on model switch and dynamically rendered Qwen voice options.
+## [2026-03-02 01:23] Integrated Zpix Font & Persisted UI State
+
+**The Problem:**
+1. The previous "Ark Pixel" font (designed for a 16px grid) exhibited scaling inconsistencies and blurry rendering when used at the required 12px size in the UI.
+2. Font usage was inconsistent across components, mixed between `font-pixel`, `font-display`, and `font-ark`.
+3. The game title field in the toolbar defaulted to a placeholder and reset on every page refresh.
+
+**Root Cause:**
+1. Grid mismatch: Using a 16px-native font at 12px results in sub-pixel aliasing.
+2. Organic growth of CSS classes led to fragmented font-family stacks.
+3. Lack of `useEffect` or `useState` initializers for `localStorage` in the `gameTitle` state.
+
+**The Solution:**
+1. **Zpix Integration:** Replaced Ark Pixel with Zpix (最像素) v3.1.10, which is natively designed on a 12px grid (11px + 1px padding), ensuring pixel-perfect rendering at `text-xs`.
+2. **Unified Styling:** Switched `ConfigurationMenu`, `MediaControlHub`, `Toolbelt`, and Chat components to use the `font-ark` class (now linked to Zpix). Specified a consistent 12px size for most control elements.
+3. **State Persistence:** Implemented lazy initialization for `gameTitle` state using `localStorage.getItem()` and updated the `onChange` handler to synchronously `setItem()`.
+
+**Key Changes:**
+- `public/fonts/zpix/`: Added `Zpix.ttf`.
+- `index.css`: Updated `@font-face` to load Zpix.
+- `tailwind.config.js`: Updated `ark`, `pixel`, and `display` stacks to use Zpix.
+- `App.tsx`: Added `localStorage` persistence for `gameTitle` and updated header styling.
+- `ConfigurationMenu.tsx` & `MediaControlHub.tsx`: Switched all controls to `font-ark` and `text-xs`.
+- `Toolbelt.tsx`, `ChatSidebar.tsx`, `ChatMessage.tsx`: Applied Zpix styling to labels, inputs, and message content.
+
 
 **The Problem:**
 After merging the multi-language (i18n) branch, the automated test suite failed abruptly on `tests/form_accessibility.test.js` with the error `MediaControlHub.tsx is missing volume aria-label`.
@@ -1224,3 +1386,70 @@ Removed the `onSpeechEnd()` method from `GeminiLiveAdapter.js`. This restores th
     * `components/Toolbelt.tsx` & `components/MediaControlHub.tsx`: Integrated `t()` hooks for accessibility attributes.
     * `index.html`: Removed `DotGothic16` parameters from Google Fonts link.
     * `index.tsx`: Added `import '@fontsource/dotgothic16';`
+
+[2026-03-06 22:45] Qwen Omni Realtime API: Streaming Lifecycle and Protocol Quirks
+- **The Problem 1 (Server-Side VAD Ignoring Audio):** When client-side VAD was disabled, the microphone instantly streamed audio to Qwen's WebSocket upon connection. However, Qwen silently ignored all audio and never triggered `speech_started`.
+- **Root Cause 1:** The Qwen Realtime API requires the `session.created` event to be fully established *before* it accepts `input_audio_buffer.append` events. Because the client lacked a delay, the audio chunks arrived too early and the server silently discarded the entire stream.
+- **The Solution 1:** Implemented a queue (`_audioQueue`) in `QwenOmniAdapter` that holds all incoming audio frames until the `session.created` event is received, at which point the queue is flushed.
+- **Key Changes 1:** Updated `QwenOmniAdapter.js` constructor, `handleIncomingMessage`, and `sendAudio` methods.
+
+- **The Problem 2 (WebSocket Crash 1006):** After generating one successful response, the Qwen WebSocket would abruptly close with code 1006.
+- **Root Cause 2:** When client-side VAD was disabled, the `VideoStreamer` component began continuously transmitting camera frames at 1fps. `QwenOmniAdapter` mechanically wrapped these in `input_image_buffer.append` events. Unlike Gemini, the Qwen Omni Realtime API (following the OpenAI spec) **does not support continuous image streaming** via buffer appends. Vision is only supported via discrete message attachments. Sending these unrecognized events caused the server to violently terminate the connection.
+- **The Solution 2:** No-op'ed the `sendImage` method in `QwenOmniAdapter.js` to log a debug warning instead of sending invalid events that crash the socket.
+- **Key Changes 2:** Updated `QwenOmniAdapter.js` `sendImage` method.
+
+### [2026-03-06 23:05] Qwen Omni Realtime Vision Streaming Protocol (1006 Crash Fix)
+- **The Problem**: When Client-Side VAD was disabled, the WebSocket to Qwen Omni would violently crash with a 1006 error immediately after the first model response.
+- **Root Cause**: Qwen's `input_image_buffer.append` has strict, undocumented requirements:
+  1. No images can be sent before `session.created`.
+  2. **CRITICAL**: No images can be sent before the *first* `input_audio_buffer.append`. Sending an image first throws a protocol error.
+  3. During active generation (`_isModelResponding`), continuous 1fps video streaming overflows Qwen's buffer limit.
+- **The Solution**: 
+  - Queued pre-session images in `_imageQueue`.
+  - Added a `_totalAudioSent === 0` guard to `sendImage` to delay video until audio starts.
+  - Added a `_isModelResponding` guard to drop video frames while Qwen is speaking, matching the VAD-enabled behavior where video capture halts during silence.
+- **Key Changes**: 
+  - `QwenOmniAdapter.js`: Rewrote `sendImage` to enforce Qwen buffer sequencing rules. Updated `sendAudio` to flush queued image.
+- **Client-Side VAD Configuration Fix**: Restored `prefixPadding` to the Qwen Omni Adapter settings panel in `utils/model-registry.ts`.
+- **Client-Side VAD Configuration Fix**: Restored `prefixPadding` to the Qwen Omni Adapter settings panel in `utils/model-registry.ts`.
+- **AppConfig Payload Explanation**: Answered user's query about unused parameters in Qwen Omni logs.
+
+## [2026-03-07 23:20] Debugged Browser Bridge and Port Accessibility
+
+**The Problem:**
+1. The "Open Browser" icon in the Antigravity IDE was failing to open or connect to the development dashboard.
+2. The dashboard was opening in a WSL-installed Chrome instance (WSLg) instead of the user's Windows Chrome.
+
+**Root Cause:**
+1. **CDP Port Failure:** The Chrome DevTools Protocol (CDP) on port 9222 was unresponsive, returning 404/Connection Refused errors, which broke the IDE's browser bridge.
+2. **Browser Precedence:** WSLg environment variables (, ) were causing tools to prioritize the internal Linux Chrome binary over the Windows host browser.
+3. **Port Inconsistency:** Previous sessions had conflicting ports (3000 vs 5173), leading to orphaned processes holding ports and causing Vite to increment to 5174.
+
+**The Solution:**
+1. **Process Cleanup:** Force-killed all orphaned  and  processes in the WSL environment to release hung ports and reset the CDP bridge.
+2. **Port Reset:** Confirmed and locked  to port 3000 (the project's intended port) and restarted the dev server.
+3. **Manual Override:** Provided the user with direct links and instructions to use Windows Chrome for the optimal multimodal experience, circumventing the broken internal IDE bridge.
+
+**Key Changes:**
+- : Verified and reset port to 3000.
+- OS Environment: Cleared stale background processes.
+
+## [2026-03-07 23:20] Debugged Browser Bridge and Port Accessibility
+
+**The Problem:**
+1. The "Open Browser" icon in the Antigravity IDE was failing to open or connect to the development dashboard.
+2. The dashboard was opening in a WSL-installed Chrome instance (WSLg) instead of the user's Windows Chrome.
+
+**Root Cause:**
+1. **CDP Port Failure:** The Chrome DevTools Protocol (CDP) on port 9222 was unresponsive, returning 404/Connection Refused errors, which broke the IDE's browser bridge.
+2. **Browser Precedence:** WSLg environment variables (DISPLAY, WAYLAND_DISPLAY) were causing tools to prioritize the internal Linux Chrome binary over the Windows host browser.
+3. **Port Inconsistency:** Previous sessions had conflicting ports (3000 vs 5173), leading to orphaned processes holding ports and causing Vite to increment to 5174.
+
+**The Solution:**
+1. **Process Cleanup:** Force-killed all orphaned vite and chrome processes in the WSL environment to release hung ports and reset the CDP bridge.
+2. **Port Reset:** Confirmed and locked vite.config.ts to port 3000 (the project's intended port) and restarted the dev server.
+3. **Manual Override:** Provided the user with direct links and instructions to use Windows Chrome for the optimal multimodal experience, circumventing the broken internal IDE bridge.
+
+**Key Changes:**
+- vite.config.ts: Verified and reset port to 3000.
+- OS Environment: Cleared stale background processes.

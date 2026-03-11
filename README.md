@@ -1,61 +1,81 @@
 # Stream Quest Dashboard
 
 ## Project Summary
-Stream Quest Dashboard is a highly interactive, premium AI-powered dashboard designed for live streaming environments. It leverages the power of Gemini (both Live API and Flash models) to provide a multimodal experience where the AI can "see" the stream, "hear" the user, and interact via voice and text.
+Stream Quest Dashboard is a highly interactive, premium AI-powered dashboard designed for live streaming environments. It provides a multimodal experience where the AI can "see" the stream, "hear" the user, and interact via voice and text.
+
+The dashboard supports multiple AI models including **Google Gemini** (Live and Flash) and **Alibaba Qwen Omni**, allowing for low-latency, real-time voice conversations with localized support.
 
 ### Key Features
-- **Multimodal AI Integration**: Support for Gemini Live (WebSocket) and Gemini Flash (REST) with real-time video/audio streaming.
-- **Interactive Stage**: A 16:9 stage area with drawing tools (pen, eraser, color palette) that the AI can perceive.
-- **Dynamic Media Routing**: Mutual exclusivity logic for video sources (Camera vs. Screen Share) ensuring the AI always looks at the active focus.
-- **Premium Audio Engine**: Custom AudioWorklet-based ring buffer for smooth, low-latency audio playback even with rapid AI speech generation.
-- **Rich UI**: Sleek, themeable interface with glassmorphism, micro-animations, and a responsive layout.
+- **Multimodal AI Integration**: 
+    - **Gemini Live (WebSocket)**: Low-latency voice-to-voice with native audio support.
+    - **Gemini Flash (REST)**: Fast multimodal reasoning with image and text support.
+    - **Qwen Omni (WebSocket)**: Efficient, conversational real-time AI from Alibaba.
+- **Interactive Stage**: A 16:9 stage area with canvas drawing tools (pen, eraser, color palette) that the AI can perceive via periodic snapshots.
+- **Dynamic Media Routing**: Automatically handles video source switching between Camera and Screen Share, ensuring the AI focuses on the active media.
+- **Persona System**: Switch between different AI personalities (Felix, Luna, Kai, Pixel) with customized system instructions and model-specific voice defaults.
+- **Premium Audio Engine**: High-performance AudioWorklet-based ring buffer for smooth, low-latency audio playback.
+- **Multilingual Support**: Supports English, Simplified Chinese, Traditional Chinese, and Japanese.
+- **Rich UI**: Modern, themeable interface with glassmorphism, micro-animations, and a highly configurable settings menu.
+
+---
+
+## Technical Architecture
+
+### Core Technologies
+- **Frontend**: React 19, TypeScript, Lucide Icons.
+- **Styling**: Vanilla CSS with Tailwind CSS (for layout utilities) and PostCSS.
+- **Build Tool**: Vite 6 (running on port 3000).
+- **Internationalization**: i18next with browser language detection.
+- **API Communication**: WebSockets for real-time models, REST for stateless models.
 
 ---
 
 ## File Structure
 ```text
 stream-quest-dashboard/
-├── components/          # React UI components (Stage, Chat, Config, etc.)
-├── contexts/            # React Context Providers for global state
-├── lib/                 # Core logic and shared utilities
-│   ├── api/             # API clients and Adapters for Gemini
-│   └── utils/           # Helper functions (media, audio, styles)
-├── public/              # Static assets and production builds
-│   └── audio-processors/# AudioWorklet scripts for PCM processing
-├── tests/               # Unit and integration tests (using node:test)
+├── components/          # React UI components (Stage, Chat, Config, Toolbelt, etc.)
+├── contexts/            # React Context Providers (LiveAPIContext handles core AI/Media logic)
+├── lib/                 # Core engine logic
+│   ├── api/             # Model clients and adapters (GeminiLive, GeminiFlash, QwenOmni)
+│   └── utils/           # Media handling (VideoStreamer, ScreenCapture, AudioPlayer)
+├── public/              # Static assets, fonts, and AudioWorklet processors
+├── src/                 # Localization (i18n.ts)
+├── utils/               # Model Registry and centralized configuration logic
+├── constants.ts         # Personas, voices, and default application settings
+├── types.ts             # Global TypeScript interface definitions
 ├── App.tsx              # Main application entry point and layout
-└── learn.md             # Developer journal and engineering decisions
+└── learn.md             # Engineering journal and architectural decisions
 ```
 
 ---
 
-## Brief File Descriptions
+## Customizing AI Behavior
 
-### Components
-- **App.tsx**: The root component. Manages high-level layout and coordination between components.
-- **Stage.tsx**: Handles the primary video/media display and the canvas drawing layer.
-- **Toolbelt.tsx**: Provides UI for pen/eraser selection, brush size, and color picking.
-- **ConfigurationMenu.tsx**: Comprehensive settings UI for API keys, model selection, thematic controls, and audio parameters.
-- **MediaControlHub.tsx**: Floating control center for toggling camera, mic, and screen share.
-- **ChatSidebar.tsx**: Displays the conversation history and handles text input.
+### Where to Change Prompts
 
-### Contexts
-- **LiveAPIContext.tsx**: The primary logic engine. Manages media streams, initializes model adapters, and handles the bridge between Browser APIs and Gemini.
+The system combines two types of instructions to form the final AI prompt:
 
-### Lib / Utilities
-- **media-utils.js**: Contains the core media classes: `VideoStreamer`, `ScreenCapture`, and `AudioPlayer`.
-- **GeminiLiveAdapter.js**: Implementation for the WebSocket-based Gemini Live API.
-- **GeminiFlashAdapter.js**: Implementation for the REST-based Gemini Flash API.
-- **SpeechAudioContext.js**: A singleton for managing a unified `AudioContext` across the application.
-- **playback.worklet.js**: AudioWorkletProcessor implementing a high-performance ring buffer for PCM audio.
+1.  **Model-Specific Base Instructions**:
+    - **Purpose**: Controls the *technical behavior* of the model (e.g., "Keep responses brief", "Don't use markdown").
+    - **Location**: `utils/model-registry.ts` inside the `MODEL_REGISTRY` object (look for the `modelInstruction` field for each model).
+    
+2.  **Persona-Based Character Instructions**:
+    - **Purpose**: Defines the *personality and tone* of the AI (e.g., "You are a wise sage", "You use cyberpunk slang").
+    - **Location**: `constants.ts` inside the `PERSONAS` array.
+    - **Note**: These can also be overridden in real-time via the **System Instructions** text area in the UI's **Settings > Behavior** section.
+
+### Voice Configuration
+Voices are mapped per persona and per model in `constants.ts`. If you add a new model or voice, ensure the mapping in `PERSONAS` is updated to maintain consistent character voices across different providers.
 
 ---
 
-## How to Start Project
+## Getting Started
 
 ### Prerequisites
 - Node.js (v18+)
-- A Gemini API Key from [Google AI Studio](https://aistudio.google.com/)
+- API Keys:
+    - [Google AI Studio](https://aistudio.google.com/) for Gemini models.
+    - Alibaba Cloud for Qwen models.
 
 ### Installation
 1. Clone the repository.
@@ -69,18 +89,17 @@ stream-quest-dashboard/
    ```bash
    npm run dev
    ```
-2. Open your browser to the URL shown in terminal (usually `http://localhost:3000`).
-3. Click the **Settings** (gear) icon, enter your API Key, select a model, and click **Connect**.
+2. The application will be available at `http://localhost:3000`.
+3. Open **Settings** (gear icon) to configure your API keys and select your preferred model.
 
 ---
 
-## How to Test
-
-The project uses the native `node:test` runner. To run tests with TypeScript support:
+## Testing
+The project uses the native `node:test` runner with `tsx` for TypeScript support.
 
 ```bash
 # Run all tests
-npx tsx --test tests/*.test.js
+npm test
 
 # Run a specific test
 npx tsx --test tests/gemini_live_adapter.test.js
@@ -88,5 +107,6 @@ npx tsx --test tests/gemini_live_adapter.test.js
 
 ---
 
-## Developer Journal
-Consult `learn.md` for a chronological log of engineering challenges, root cause analyses, and architectural decisions made during development.
+## Developer Documentation
+- **Architecture & Decisions**: Check `learn.md` for detailed notes on the implementation of the audio engine, media routing, and adapter patterns.
+- **Adding a Model**: Register the new model in `utils/model-registry.ts` and implement a corresponding adapter in `lib/api/adapters/`.
