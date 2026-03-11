@@ -259,7 +259,10 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                             <span className="text-xs text-gray-300">{t(`systemConfig.fields.${settingId}`, field.label)}</span>
                             <button
                                 onClick={() => handleChange(settingId as keyof AppConfig, !config[settingId as keyof AppConfig])}
-                                className={`w-8 h-4 rounded-full relative transition-colors ${config[settingId as keyof AppConfig] ? 'bg-green-500' : 'bg-gray-600'}`}
+                                role="switch"
+                                aria-checked={Boolean(config[settingId as keyof AppConfig])}
+                                aria-label={t(`systemConfig.fields.${settingId}`, field.label)}
+                                className={`w-8 h-4 rounded-full relative transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffd700] focus-visible:ring-offset-1 focus-visible:ring-offset-[#162032] ${config[settingId as keyof AppConfig] ? 'bg-green-500' : 'bg-gray-600'}`}
                             >
                                 <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${config[settingId as keyof AppConfig] ? 'translate-x-4' : 'translate-x-0'}`} />
                             </button>
@@ -488,7 +491,10 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
                                         ...themeConfig!,
                                         userAssets: { ...themeConfig?.userAssets, startScreenAudio: !themeConfig?.userAssets?.startScreenAudio }
                                     })}
-                                    className={`w-8 h-4 rounded-full relative transition-colors ${themeConfig?.userAssets?.startScreenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
+                                    role="switch"
+                                    aria-checked={!!themeConfig?.userAssets?.startScreenAudio}
+                                    aria-label={t('appearance.enableAudio', 'Enable Audio (Video Only)')}
+                                    className={`w-8 h-4 rounded-full relative transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffd700] focus-visible:ring-offset-1 focus-visible:ring-offset-[#162032] ${themeConfig?.userAssets?.startScreenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
                                 >
                                     <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${themeConfig?.userAssets?.startScreenAudio ? 'translate-x-4' : 'translate-x-0'}`} />
                                 </button>
