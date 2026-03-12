@@ -365,4 +365,5 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
     return menuContent;
 };
 
-export default MediaControlHub;
+// React.memo prevents this heavy portal component from executing its hook/render cycles when closed during root-level state changes
+export default React.memo(MediaControlHub);
