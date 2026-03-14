@@ -274,7 +274,10 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                     </div>
                     <button
                         onClick={() => handleChange('screenAudio', !config.screenAudio)}
-                        className={`w-8 h-4 rounded-full relative transition-colors ${config.screenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
+                        role="switch"
+                        aria-checked={config.screenAudio}
+                        aria-label={t('mediaControl.screenAudio', 'Share System Audio')}
+                        className={`w-8 h-4 rounded-full relative transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffd700] ${config.screenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
                     >
                         <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${config.screenAudio ? 'translate-x-4' : 'translate-x-0'}`} />
                     </button>
