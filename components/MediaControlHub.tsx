@@ -270,11 +270,14 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
                 <div className="flex items-center justify-between bg-[#111827] p-2 rounded border border-gray-700">
                     <div className="flex items-center gap-2 text-xs text-gray-300">
                         <Gamepad2 size={14} className="text-blue-400" />
-                        <span>{t('mediaControl.screenAudio', 'Share System Audio')}</span>
+                        <span id="label-screen-audio">{t('mediaControl.screenAudio', 'Share System Audio')}</span>
                     </div>
                     <button
+                        role="switch"
+                        aria-checked={config.screenAudio}
+                        aria-labelledby="label-screen-audio"
                         onClick={() => handleChange('screenAudio', !config.screenAudio)}
-                        className={`w-8 h-4 rounded-full relative transition-colors ${config.screenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
+                        className={`w-8 h-4 rounded-full relative transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffd700] ${config.screenAudio ? 'bg-green-500' : 'bg-gray-600'}`}
                     >
                         <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${config.screenAudio ? 'translate-x-4' : 'translate-x-0'}`} />
                     </button>
