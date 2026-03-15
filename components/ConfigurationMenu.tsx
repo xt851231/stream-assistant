@@ -19,7 +19,10 @@ interface ConfigurationMenuProps {
     containerRef?: React.RefObject<HTMLDivElement>;
 }
 
-const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, onConfigChange, themeConfig, onThemeConfigChange, onClose, triggerRef, isPortrait, containerRef }) => {
+// ⚡ Bolt: Wrapped ConfigurationMenu in React.memo to prevent expensive re-renders
+// when unrelated root App state changes. Since this component iterates over large
+// sets of configuration fields and models, avoiding unnecessary render cycles saves CPU.
+const ConfigurationMenu: React.FC<ConfigurationMenuProps> = React.memo(({ isOpen, config, onConfigChange, themeConfig, onThemeConfigChange, onClose, triggerRef, isPortrait, containerRef }) => {
     const { t } = useTranslation();
     const currentModelId = config.provider && MODEL_REGISTRY[config.provider] ? config.provider : 'gemini-live';
     const currentModel = MODEL_REGISTRY[currentModelId];
@@ -543,6 +546,6 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
         </aside>,
         document.body
     );
-};
+});
 
 export default ConfigurationMenu;

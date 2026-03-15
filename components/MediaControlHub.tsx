@@ -25,7 +25,10 @@ interface DeviceInfo {
     label: string;
 }
 
-const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onConfigChange, onClose, themeConfig, onToggleAudio, onToggleVideo, onToggleScreen, isPortrait, containerRef, triggerRef }) => {
+// ⚡ Bolt: Wrapped MediaControlHub in React.memo to prevent expensive re-renders
+// when root App state (e.g., active tool, color) changes, especially since this
+// component frequently portals to the document body.
+const MediaControlHub: React.FC<MediaControlHubProps> = React.memo(({ isOpen, config, onConfigChange, onClose, themeConfig, onToggleAudio, onToggleVideo, onToggleScreen, isPortrait, containerRef, triggerRef }) => {
     const { t } = useTranslation();
     const [microphones, setMicrophones] = useState<DeviceInfo[]>([]);
     const [cameras, setCameras] = useState<DeviceInfo[]>([]);
@@ -363,6 +366,6 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
     }
 
     return menuContent;
-};
+});
 
 export default MediaControlHub;
