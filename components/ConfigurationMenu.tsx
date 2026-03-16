@@ -545,4 +545,4 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
     );
 };
 
-export default ConfigurationMenu;
+export default React.memo(ConfigurationMenu);

@@ -185,8 +185,7 @@ const App: React.FC = () => {
     }, [sendMessage, config]);
 
     // Media Handlers
-    // Media Handlers
-    const handleMediaConfigChange = (newConfig: MediaConfig) => {
+    const handleMediaConfigChange = React.useCallback((newConfig: MediaConfig) => {
         console.log('🔧 handleMediaConfigChange:', newConfig);
         setMediaConfig(newConfig);
 
@@ -209,16 +208,25 @@ const App: React.FC = () => {
             // Note: toggleScreen will need to handle restarting if screenAudio changed while active
             toggleScreen(newConfig.screenShareEnabled, config, newConfig.screenAudio);
         }
-    };
+    }, [audioStreaming, videoStreaming, screenSharing, mediaConfig, config, toggleAudio, toggleVideo, toggleScreen]);
 
     // Calculate effective config regarding active states from Context
     // This ensures the UI always reflects the REAL state, not just the local config
-    const effectiveMediaConfig: MediaConfig = {
+    const effectiveMediaConfig: MediaConfig = React.useMemo(() => ({
         ...mediaConfig,
         audioEnabled: audioStreaming,
         videoEnabled: videoStreaming,
         screenShareEnabled: screenSharing
-    };
+    }), [mediaConfig, audioStreaming, videoStreaming, screenSharing]);
+
+    // Memoized toggle handlers for MediaControlHub to prevent re-renders
+    const handleToggleAudio = React.useCallback((enabled: boolean) => toggleAudio(enabled, 'default', config), [toggleAudio, config]);
+    const handleToggleVideo = React.useCallback((enabled: boolean) => toggleVideo(enabled, 'default', config), [toggleVideo, config]);
+    const handleToggleScreen = React.useCallback((enabled: boolean) => toggleScreen(enabled, config, mediaConfig.screenAudio), [toggleScreen, config, mediaConfig.screenAudio]);
+
+    // Stable close handlers
+    const handleConfigClose = React.useCallback(() => setIsConfigOpen(false), []);
+    const handleMediaClose = React.useCallback(() => setIsMediaOpen(false), []);
 
     /* 
        Refactor Note: 
@@ -448,11 +456,11 @@ const App: React.FC = () => {
                                         isOpen={isMediaOpen}
                                         config={effectiveMediaConfig}
                                         onConfigChange={handleMediaConfigChange}
-                                        onClose={() => setIsMediaOpen(false)}
+                                        onClose={handleMediaClose}
                                         themeConfig={themeConfig}
-                                        onToggleAudio={(enabled) => toggleAudio(enabled, 'default', config)}
-                                        onToggleVideo={(enabled) => toggleVideo(enabled, 'default', config)}
-                                        onToggleScreen={(enabled) => toggleScreen(enabled, config, mediaConfig.screenAudio)}
+                                        onToggleAudio={handleToggleAudio}
+                                        onToggleVideo={handleToggleVideo}
+                                        onToggleScreen={handleToggleScreen}
                                         isPortrait={isPortrait}
                                         containerRef={appContainerRef}
                                         triggerRef={mediaButtonRef}
@@ -518,7 +526,7 @@ const App: React.FC = () => {
                 themeConfig={themeConfig}
                 onConfigChange={setConfig}
                 onThemeConfigChange={setThemeConfig}
-                onClose={() => setIsConfigOpen(false)}
+                onClose={handleConfigClose}
                 triggerRef={settingsButtonRef}
                 isPortrait={isPortrait}
                 containerRef={appContainerRef}
