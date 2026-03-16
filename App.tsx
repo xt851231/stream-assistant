@@ -404,7 +404,7 @@ const App: React.FC = () => {
                                 <div className="flex gap-2 items-center relative z-50">
                                     <button
                                         onClick={() => setIsPortrait(!isPortrait)}
-                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isPortrait ? 'bg-[#ffd700] border-white' : 'bg-blue-900'}`}
+                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffd700] ${isPortrait ? 'bg-[#ffd700] border-white' : 'bg-blue-900'}`}
                                         title={isPortrait ? "Switch to Landscape Mode" : "Switch to Portrait Mode"}
                                         aria-label={isPortrait ? "Switch to Landscape Mode" : "Switch to Portrait Mode"}
                                         aria-pressed={isPortrait}
@@ -414,8 +414,9 @@ const App: React.FC = () => {
                                     <button
                                         ref={settingsButtonRef}
                                         onClick={() => { setIsConfigOpen(!isConfigOpen); setIsMediaOpen(false); }}
-                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isConfigOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
+                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffd700] ${isConfigOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
                                             }`}
+                                        title="Configuration Menu"
                                         aria-label="Toggle Configuration Menu"
                                         aria-expanded={isConfigOpen}
                                     >
@@ -424,8 +425,9 @@ const App: React.FC = () => {
                                     <button
                                         ref={mediaButtonRef}
                                         onClick={() => { setIsMediaOpen(!isMediaOpen); setIsConfigOpen(false); }}
-                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isMediaOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
+                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffd700] ${isMediaOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
                                             }`}
+                                        title="Media Controls"
                                         aria-label="Toggle Media Controls"
                                         aria-expanded={isMediaOpen}
                                     >
@@ -433,7 +435,7 @@ const App: React.FC = () => {
                                     </button>
                                     <button
                                         onClick={() => setIsChatOpen(!isChatOpen)}
-                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 ${isChatOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
+                                        className={`rpg-window px-3 py-2 flex items-center justify-center border-2 border-white transition-all hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffd700] ${isChatOpen ? 'bg-[#ffd700] border-white' : 'bg-blue-900'
                                             }`}
                                         title="Toggle Chat"
                                         aria-label="Toggle Chat"
