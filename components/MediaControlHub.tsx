@@ -365,4 +365,4 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
     return menuContent;
 };
 
-export default MediaControlHub;
+export default React.memo(MediaControlHub);
