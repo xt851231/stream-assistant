@@ -186,7 +186,8 @@ const App: React.FC = () => {
 
     // Media Handlers
     // Media Handlers
-    const handleMediaConfigChange = (newConfig: MediaConfig) => {
+    // ⚡ Bolt: Memoize config handler to prevent unnecessary re-renders of the large MediaControlHub component
+    const handleMediaConfigChange = React.useCallback((newConfig: MediaConfig) => {
         console.log('🔧 handleMediaConfigChange:', newConfig);
         setMediaConfig(newConfig);
 
@@ -209,16 +210,17 @@ const App: React.FC = () => {
             // Note: toggleScreen will need to handle restarting if screenAudio changed while active
             toggleScreen(newConfig.screenShareEnabled, config, newConfig.screenAudio);
         }
-    };
+    }, [audioStreaming, videoStreaming, screenSharing, mediaConfig.microphoneId, mediaConfig.cameraId, mediaConfig.screenAudio, config, toggleAudio, toggleVideo, toggleScreen]);
 
     // Calculate effective config regarding active states from Context
     // This ensures the UI always reflects the REAL state, not just the local config
-    const effectiveMediaConfig: MediaConfig = {
+    // ⚡ Bolt: Memoize derived config to maintain object reference stability
+    const effectiveMediaConfig: MediaConfig = React.useMemo(() => ({
         ...mediaConfig,
         audioEnabled: audioStreaming,
         videoEnabled: videoStreaming,
         screenShareEnabled: screenSharing
-    };
+    }), [mediaConfig, audioStreaming, videoStreaming, screenSharing]);
 
     /* 
        Refactor Note: 
@@ -240,6 +242,27 @@ const App: React.FC = () => {
     const handleCloseChat = React.useCallback(() => {
         setIsChatOpen(false);
     }, []);
+
+    const handleCloseConfig = React.useCallback(() => {
+        setIsConfigOpen(false);
+    }, []);
+
+    const handleCloseMedia = React.useCallback(() => {
+        setIsMediaOpen(false);
+    }, []);
+
+    const handleToggleAudio = React.useCallback((enabled: boolean) => {
+        toggleAudio(enabled, 'default', config);
+    }, [toggleAudio, config]);
+
+    const handleToggleVideo = React.useCallback((enabled: boolean) => {
+        toggleVideo(enabled, 'default', config);
+    }, [toggleVideo, config]);
+
+    const handleToggleScreen = React.useCallback((enabled: boolean) => {
+        toggleScreen(enabled, config, mediaConfig.screenAudio);
+    }, [toggleScreen, config, mediaConfig.screenAudio]);
+
 
     const stageStyle = React.useMemo(() => ({
         backgroundColor: getBgColor('#000000', themeConfig?.opacity?.mainStage || 0.8)
@@ -448,11 +471,11 @@ const App: React.FC = () => {
                                         isOpen={isMediaOpen}
                                         config={effectiveMediaConfig}
                                         onConfigChange={handleMediaConfigChange}
-                                        onClose={() => setIsMediaOpen(false)}
+                                        onClose={handleCloseMedia}
                                         themeConfig={themeConfig}
-                                        onToggleAudio={(enabled) => toggleAudio(enabled, 'default', config)}
-                                        onToggleVideo={(enabled) => toggleVideo(enabled, 'default', config)}
-                                        onToggleScreen={(enabled) => toggleScreen(enabled, config, mediaConfig.screenAudio)}
+                                        onToggleAudio={handleToggleAudio}
+                                        onToggleVideo={handleToggleVideo}
+                                        onToggleScreen={handleToggleScreen}
                                         isPortrait={isPortrait}
                                         containerRef={appContainerRef}
                                         triggerRef={mediaButtonRef}
@@ -518,7 +541,7 @@ const App: React.FC = () => {
                 themeConfig={themeConfig}
                 onConfigChange={setConfig}
                 onThemeConfigChange={setThemeConfig}
-                onClose={() => setIsConfigOpen(false)}
+                onClose={handleCloseConfig}
                 triggerRef={settingsButtonRef}
                 isPortrait={isPortrait}
                 containerRef={appContainerRef}
