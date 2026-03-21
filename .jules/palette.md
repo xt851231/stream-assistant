@@ -1,0 +1,3 @@
+## 2024-03-21 - Custom Pill Switch Accessibility
+**Learning:** Custom pill switch components used throughout the application (e.g., ConfigurationMenu, MediaControlHub) were missing essential accessibility attributes, preventing screen readers from understanding their state and purpose. Additionally, they lacked visible focus indicators for keyboard navigation.
+**Action:** Always ensure custom toggle switches include `role="switch"`, `aria-checked`, a descriptive `aria-label`, and clear keyboard focus styles (`focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ffd700]`) to ensure full accessibility.
