@@ -1,7 +1,16 @@
+// Cache parsed RGB components to avoid redundant string replacements and hex parsing
+// during frequent React component renders (e.g. ChatMessage lists)
+const rgbCache = new Map<string, string>();
+
 export const getBgColor = (baseColorHex: string, opacity: number): string => {
-    const hex = baseColorHex.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    let rgb = rgbCache.get(baseColorHex);
+    if (!rgb) {
+        const hex = baseColorHex.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        rgb = `${r}, ${g}, ${b}`;
+        rgbCache.set(baseColorHex, rgb);
+    }
+    return `rgba(${rgb}, ${opacity})`;
 };
