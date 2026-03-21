@@ -54,3 +54,29 @@ test('BrowserTTSAdapter should redact transcription logs', async (t) => {
     console.log = originalLog;
     assert.ok(!logContent.includes(sensitiveText), 'Should NOT log sensitive speaking text');
 });
+
+test('GeminiLiveAdapter should redact systemInstruction from connectConfig log', async (t) => {
+    const originalLog = console.log;
+    let logContent = '';
+    console.log = (...args) => {
+        logContent += args.join(' ') + '\n';
+    };
+
+    const sensitiveInstruction = "SECRET_SYSTEM_INSTRUCTION_123";
+    const adapter = new GeminiLiveAdapter({
+        apiKey: 'test',
+        systemInstruction: sensitiveInstruction,
+        GoogleGenAIClass: class {
+            constructor() {
+                this.live = {
+                    connect: async () => ({})
+                };
+            }
+        }
+    });
+
+    await adapter.connect();
+
+    console.log = originalLog;
+    assert.ok(!logContent.includes(sensitiveInstruction), 'Should NOT log sensitive systemInstruction text');
+});
