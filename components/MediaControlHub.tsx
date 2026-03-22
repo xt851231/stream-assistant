@@ -25,7 +25,8 @@ interface DeviceInfo {
     label: string;
 }
 
-const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onConfigChange, onClose, themeConfig, onToggleAudio, onToggleVideo, onToggleScreen, isPortrait, containerRef, triggerRef }) => {
+// Memoize heavy portal component to prevent execution of hook/render cycles when closed during root-level state changes
+const MediaControlHub: React.FC<MediaControlHubProps> = React.memo(({ isOpen, config, onConfigChange, onClose, themeConfig, onToggleAudio, onToggleVideo, onToggleScreen, isPortrait, containerRef, triggerRef }) => {
     const { t } = useTranslation();
     const [microphones, setMicrophones] = useState<DeviceInfo[]>([]);
     const [cameras, setCameras] = useState<DeviceInfo[]>([]);
@@ -363,6 +364,6 @@ const MediaControlHub: React.FC<MediaControlHubProps> = ({ isOpen, config, onCon
     }
 
     return menuContent;
-};
+});
 
 export default MediaControlHub;

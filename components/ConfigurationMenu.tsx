@@ -19,7 +19,8 @@ interface ConfigurationMenuProps {
     containerRef?: React.RefObject<HTMLDivElement>;
 }
 
-const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, onConfigChange, themeConfig, onThemeConfigChange, onClose, triggerRef, isPortrait, containerRef }) => {
+// Memoize heavy portal component to prevent execution of hook/render cycles when closed during root-level state changes
+const ConfigurationMenu: React.FC<ConfigurationMenuProps> = React.memo(({ isOpen, config, onConfigChange, themeConfig, onThemeConfigChange, onClose, triggerRef, isPortrait, containerRef }) => {
     const { t } = useTranslation();
     const currentModelId = config.provider && MODEL_REGISTRY[config.provider] ? config.provider : 'gemini-live';
     const currentModel = MODEL_REGISTRY[currentModelId];
@@ -543,6 +544,6 @@ const ConfigurationMenu: React.FC<ConfigurationMenuProps> = ({ isOpen, config, o
         </aside>,
         document.body
     );
-};
+});
 
 export default ConfigurationMenu;
